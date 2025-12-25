@@ -1,210 +1,355 @@
-const pull = require('../server/node_modules/pull-stream');
-const moment = require('../server/node_modules/moment');
-const { getConfig } = require('../configs/config-manager.js');
-const logLimit = getConfig().ssbLogStream?.limit || 1000;
+const pull = require("../server/node_modules/pull-stream")
+const moment = require("../server/node_modules/moment")
+const { getConfig } = require("../configs/config-manager.js")
+const categories = require("../backend/opinion_categories")
+const logLimit = getConfig().ssbLogStream?.limit || 1000
+
+const isValidId = (to) => /^@[A-Za-z0-9+/]+={0,2}\.ed25519$/.test(String(to || ""))
+
+const parseNum = (v) => {
+  const n = parseFloat(String(v ?? "").replace(",", "."))
+  return Number.isFinite(n) ? n : NaN
+}
+
+const normalizeTags = (raw) => {
+  if (raw === undefined || raw === null) return []
+  if (Array.isArray(raw)) return raw.map(t => String(t || "").trim()).filter(Boolean)
+  return String(raw).split(",").map(t => t.trim()).filter(Boolean)
+}
 
 module.exports = ({ cooler }) => {
-  let ssb;
-  const openSsb = async () => { if (!ssb) ssb = await cooler.open(); return ssb; };
+  let ssb
+  const openSsb = async () => { if (!ssb) ssb = await cooler.open(); return ssb }
+
+  const getAllMessages = async (ssbClient) =>
+    new Promise((resolve, reject) => {
+      pull(
+        ssbClient.createLogStream({ limit: logLimit }),
+        pull.collect((err, msgs) => err ? reject(err) : resolve(msgs))
+      )
+    })
+
+  const getMsg = async (ssbClient, key) =>
+    new Promise((resolve, reject) => {
+      ssbClient.get(key, (err, msg) => err ? reject(err) : resolve(msg))
+    })
+
+  const buildIndex = (messages) => {
+    const tomb = new Set()
+    const nodes = new Map()
+    const parent = new Map()
+    const child = new Map()
+
+    for (const m of messages) {
+      const k = m.key
+      const v = m.value || {}
+      const c = v.content
+      if (!c) continue
+
+      if (c.type === "tombstone" && c.target) {
+        tomb.add(c.target)
+        continue
+      }
+
+      if (c.type === "transfer") {
+        nodes.set(k, { key: k, ts: v.timestamp || m.timestamp || 0, c, author: v.author })
+        if (c.replaces) {
+          parent.set(k, c.replaces)
+          child.set(c.replaces, k)
+        }
+      }
+    }
+
+    const rootOf = (id) => {
+      let cur = id
+      while (parent.has(cur)) cur = parent.get(cur)
+      return cur
+    }
+
+    const tipOf = (id) => {
+      let cur = id
+      while (child.has(cur)) cur = child.get(cur)
+      return cur
+    }
+
+    const roots = new Set()
+    for (const id of nodes.keys()) roots.add(rootOf(id))
+
+    const tipByRoot = new Map()
+    for (const r of roots) tipByRoot.set(r, tipOf(r))
+
+    return { tomb, nodes, parent, child, rootOf, tipOf, tipByRoot }
+  }
+
+  const deriveStatus = (t) => {
+    const status = String(t.status || "").toUpperCase()
+    const from = t.from
+    const to = t.to
+    const required = from === to ? 1 : 2
+    const confirmedCount = Array.isArray(t.confirmedBy) ? t.confirmedBy.length : 0
+
+    const dl = t.deadline ? moment(t.deadline) : null
+    if (status === "UNCONFIRMED" && dl && dl.isValid() && dl.isBefore(moment())) {
+      return confirmedCount >= required ? "CLOSED" : "DISCARDED"
+    }
+    if (status === "CLOSED" || status === "DISCARDED" || status === "UNCONFIRMED") return status
+    return status || "UNCONFIRMED"
+  }
+
+  const buildTransfer = (node) => {
+    const c = node.c || {}
+    return {
+      id: node.key,
+      from: c.from,
+      to: c.to,
+      concept: c.concept,
+      amount: c.amount,
+      createdAt: c.createdAt || new Date(node.ts).toISOString(),
+      updatedAt: c.updatedAt || null,
+      deadline: c.deadline,
+      confirmedBy: Array.isArray(c.confirmedBy) ? c.confirmedBy : [],
+      status: deriveStatus(c),
+      tags: Array.isArray(c.tags) ? c.tags : [],
+      opinions: c.opinions || {},
+      opinions_inhabitants: Array.isArray(c.opinions_inhabitants) ? c.opinions_inhabitants : []
+    }
+  }
 
   return {
-    type: 'transfer',
+    type: "transfer",
+
+    async resolveCurrentId(id) {
+      const ssbClient = await openSsb()
+      const messages = await getAllMessages(ssbClient)
+      const idx = buildIndex(messages)
+
+      let tip = id
+      while (idx.child.has(tip)) tip = idx.child.get(tip)
+      if (idx.tomb.has(tip)) throw new Error("Not found")
+      return tip
+    },
 
     async createTransfer(to, concept, amount, deadline, tagsRaw = []) {
-      const ssb = await openSsb();
-      const userId = ssb.id;
-      if (!/^@[A-Za-z0-9+\/]+= {0,2}\.ed25519$/.test(to)) throw new Error('Invalid recipient ID');
-      const num = typeof amount === 'string' ? parseFloat(amount.replace(',', '.')) : amount;
-      if (isNaN(num) || num <= 0) throw new Error('Amount must be positive');
-      const dl = moment(deadline, moment.ISO_8601, true);
-      if (!dl.isValid() || dl.isBefore(moment())) throw new Error('Deadline must be in the future');
-      const tags = Array.isArray(tagsRaw) ? tagsRaw.filter(Boolean) : tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-      const isSelf = to === userId;
+      const ssbClient = await openSsb()
+      const userId = ssbClient.id
+
+      if (!isValidId(to)) throw new Error("Invalid recipient ID")
+
+      const num = parseNum(amount)
+      if (!Number.isFinite(num) || num <= 0) throw new Error("Amount must be positive")
+
+      const dl = moment(deadline, moment.ISO_8601, true)
+      if (!dl.isValid() || dl.isBefore(moment())) throw new Error("Deadline must be in the future")
+
+      const tags = normalizeTags(tagsRaw)
+      const isSelf = to === userId
+      const now = new Date().toISOString()
+
       const content = {
-        type: 'transfer',
+        type: "transfer",
         from: userId,
         to,
-        concept,
+        concept: String(concept || ""),
         amount: num.toFixed(6),
-        createdAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
         deadline: dl.toISOString(),
-        confirmedBy: isSelf ? [userId, userId] : [userId],
-        status: isSelf ? 'CLOSED' : 'UNCONFIRMED',
+        confirmedBy: [userId],
+        status: isSelf ? "CLOSED" : "UNCONFIRMED",
         tags,
         opinions: {},
         opinions_inhabitants: []
-      };
+      }
+
       return new Promise((resolve, reject) => {
-        ssb.publish(content, (err, msg) => err ? reject(err) : resolve(msg));
-      });
+        ssbClient.publish(content, (err, msg) => err ? reject(err) : resolve(msg))
+      })
     },
 
     async updateTransferById(id, to, concept, amount, deadline, tagsRaw = []) {
-      const ssb = await openSsb();
-      const userId = ssb.id;
-      const old = await new Promise((res, rej) => ssb.get(id, (err, msg) => err || !msg?.content ? rej(err || new Error()) : res(msg)));
-      if (Object.keys(old.content.opinions || {}).length > 0) throw new Error('Cannot edit transfer after it has received opinions.');
-      if (old.content.from !== userId) throw new Error('Not the author');
-      if (old.content.status !== 'UNCONFIRMED') throw new Error('Can only edit unconfirmed');
+      const ssbClient = await openSsb()
+      const userId = ssbClient.id
+      const tipId = await this.resolveCurrentId(id)
+      const old = await getMsg(ssbClient, tipId)
 
-      const tomb = { type: 'tombstone', id, deletedAt: new Date().toISOString() };
-      await new Promise((res, rej) => ssb.publish(tomb, err => err ? rej(err) : res()));
+      if (!old?.content || old.content.type !== "transfer") throw new Error("Transfer not found")
 
-      if (!/^@[A-Za-z0-9+\/]+= {0,2}\.ed25519$/.test(to)) throw new Error('Invalid recipient ID');
-      const num = typeof amount === 'string' ? parseFloat(amount.replace(',', '.')) : amount;
-      if (isNaN(num) || num <= 0) throw new Error('Amount must be positive');
-      const dl = moment(deadline, moment.ISO_8601, true);
-      if (!dl.isValid() || dl.isBefore(moment())) throw new Error('Deadline must be in the future');
-      const tags = Array.isArray(tagsRaw) ? tagsRaw.filter(Boolean) : tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
-      const isSelf = to === userId;
+      const current = old.content
+      const currentStatus = deriveStatus(current)
+
+      if (Object.keys(current.opinions || {}).length > 0) throw new Error("Cannot edit transfer after it has received opinions.")
+      if (current.from !== userId) throw new Error("Not the author")
+      if (currentStatus !== "UNCONFIRMED") throw new Error("Can only edit unconfirmed")
+
+      const dlOld = current.deadline ? moment(current.deadline) : null
+      if (dlOld && dlOld.isValid() && dlOld.isBefore(moment())) throw new Error("Cannot edit expired")
+
+      if (!isValidId(to)) throw new Error("Invalid recipient ID")
+
+      const num = parseNum(amount)
+      if (!Number.isFinite(num) || num <= 0) throw new Error("Amount must be positive")
+
+      const dl = moment(deadline, moment.ISO_8601, true)
+      if (!dl.isValid() || dl.isBefore(moment())) throw new Error("Deadline must be in the future")
+
+      const tags = normalizeTags(tagsRaw)
+      const isSelf = to === userId
+
+      const tombstone = { type: "tombstone", target: tipId, deletedAt: new Date().toISOString(), author: userId }
+      await new Promise((res, rej) => ssbClient.publish(tombstone, (err) => err ? rej(err) : res()))
+
       const updated = {
-        type: 'transfer',
+        type: "transfer",
         from: userId,
         to,
-        concept,
+        concept: String(concept || ""),
         amount: num.toFixed(6),
-        createdAt: old.content.createdAt,
+        createdAt: current.createdAt,
         deadline: dl.toISOString(),
-        confirmedBy: isSelf ? [userId, userId] : [userId],
-        status: isSelf ? 'CLOSED' : 'UNCONFIRMED',
+        confirmedBy: [userId],
+        status: isSelf ? "CLOSED" : "UNCONFIRMED",
         tags,
         opinions: {},
         opinions_inhabitants: [],
         updatedAt: new Date().toISOString(),
-        replaces: id
-      };
+        replaces: tipId
+      }
+
       return new Promise((resolve, reject) => {
-        ssb.publish(updated, (err, msg) => err ? reject(err) : resolve(msg));
-      });
+        ssbClient.publish(updated, (err, msg) => err ? reject(err) : resolve(msg))
+      })
     },
 
     async confirmTransferById(id) {
-      const ssb = await openSsb();
-      const userId = ssb.id;
-      return new Promise((resolve, reject) => {
-        ssb.get(id, async (err, msg) => {
-          if (err || !msg?.content) return reject(new Error('Not found'));
-          const t = msg.content;
-          if (t.status !== 'UNCONFIRMED') return reject(new Error('Not unconfirmed'));
-          if (t.to !== userId) return reject(new Error('Not the recipient'));
+      const ssbClient = await openSsb()
+      const userId = ssbClient.id
+      const tipId = await this.resolveCurrentId(id)
+      const msg = await getMsg(ssbClient, tipId)
 
-          const newConfirmed = [...t.confirmedBy, userId].filter((v, i, a) => a.indexOf(v) === i);
-          const newStatus = newConfirmed.length >= 2 ? 'CLOSED' : 'UNCONFIRMED';
-          const upd = { ...t, confirmedBy: newConfirmed, status: newStatus, updatedAt: new Date().toISOString(), replaces: id };
-          const tombstone = { type: 'tombstone', id, deletedAt: new Date().toISOString() };
-          await new Promise((res, rej) => ssb.publish(tombstone, (err) => err ? rej(err) : res()));
-          ssb.publish(upd, (err, result) => err ? reject(err) : resolve(result));
-        });
-      });
+      if (!msg?.content || msg.content.type !== "transfer") throw new Error("Not found")
+
+      const t = msg.content
+      const status = deriveStatus(t)
+      if (status !== "UNCONFIRMED") throw new Error("Not unconfirmed")
+      if (t.to !== userId) throw new Error("Not the recipient")
+
+      const dl = t.deadline ? moment(t.deadline) : null
+      if (dl && dl.isValid() && dl.isBefore(moment())) throw new Error("Expired")
+
+      const existing = Array.isArray(t.confirmedBy) ? t.confirmedBy : []
+      if (existing.includes(userId)) throw new Error("Already confirmed")
+
+      const required = t.from === t.to ? 1 : 2
+      const newConfirmed = existing.concat(userId).filter((v, i, a) => a.indexOf(v) === i)
+      const newStatus = newConfirmed.length >= required ? "CLOSED" : "UNCONFIRMED"
+
+      const tombstone = { type: "tombstone", target: tipId, deletedAt: new Date().toISOString(), author: userId }
+      await new Promise((res, rej) => ssbClient.publish(tombstone, (e) => e ? rej(e) : res()))
+
+      const upd = {
+        ...t,
+        confirmedBy: newConfirmed,
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+        replaces: tipId
+      }
+
+      return new Promise((resolve, reject) => {
+        ssbClient.publish(upd, (e2, result) => e2 ? reject(e2) : resolve(result))
+      })
     },
 
     async deleteTransferById(id) {
-      const ssb = await openSsb();
-      const userId = ssb.id;
-      return new Promise((resolve, reject) => {
-        ssb.get(id, (err, msg) => {
-          if (err || !msg?.content) return reject(new Error('Not found'));
-          const t = msg.content;
-          if (t.from !== userId) return reject(new Error('Not the author'));
-          if (t.status !== 'UNCONFIRMED' || t.confirmedBy.length >= 2) return reject(new Error('Not editable'));
+      const ssbClient = await openSsb()
+      const userId = ssbClient.id
+      const tipId = await this.resolveCurrentId(id)
+      const msg = await getMsg(ssbClient, tipId)
 
-          const tomb = { type: 'tombstone', id, deletedAt: new Date().toISOString() };
-          ssb.publish(tomb, err => err ? reject(err) : resolve());
-        });
-      });
+      if (!msg?.content || msg.content.type !== "transfer") throw new Error("Not found")
+
+      const t = msg.content
+      const st = deriveStatus(t)
+      const confirmedCount = Array.isArray(t.confirmedBy) ? t.confirmedBy.length : 0
+      const required = t.from === t.to ? 1 : 2
+
+      if (t.from !== userId) throw new Error("Not the author")
+      if (st !== "UNCONFIRMED") throw new Error("Not editable")
+      if (confirmedCount >= required) throw new Error("Not editable")
+
+      const dl = t.deadline ? moment(t.deadline) : null
+      if (dl && dl.isValid() && dl.isBefore(moment())) throw new Error("Cannot delete expired")
+
+      const tombstone = { type: "tombstone", target: tipId, deletedAt: new Date().toISOString(), author: userId }
+      return new Promise((resolve, reject) => {
+        ssbClient.publish(tombstone, (err) => err ? reject(err) : resolve())
+      })
     },
 
-	async listAll(filter = 'all') {
-	  const ssb = await openSsb();
-	  return new Promise((resolve, reject) => {
-	    pull(
-	      ssb.createLogStream({ limit: logLimit }),
-	      pull.collect(async (err, results) => {
-		if (err) return reject(err);
-		const tombstoned = new Set();
-		const replaces = new Map();
-		const transfersById = new Map();
-		const now = moment();
+    async listAll(filter = "all") {
+      const ssbClient = await openSsb()
+      const messages = await getAllMessages(ssbClient)
+      const idx = buildIndex(messages)
 
-		for (const r of results) {
-		  const c = r.value?.content;
-		  const k = r.key;
-		  if (!c) continue;
-		  if (c.type === 'tombstone' && c.id) {
-		    tombstoned.add(c.id);
-		    continue;
-		  }
-		  if (c.type === 'transfer') {
-		    if (tombstoned.has(k)) continue;
-		    if (c.replaces) replaces.set(c.replaces, k);
-		    transfersById.set(k, { id: k, ...c });
-		  }
-		}
-
-		for (const replacedId of replaces.keys()) {
-		  transfersById.delete(replacedId);
-		}
-
-		const deduped = Array.from(transfersById.values());
-
-		for (const item of deduped) {
-		  const dl = moment(item.deadline);
-		  if (item.status === 'UNCONFIRMED' && dl.isBefore(now)) {
-		    item.status = (item.confirmedBy || []).length >= 2 ? 'CLOSED' : 'DISCARDED';
-		  }
-		}
-
-		resolve(deduped);
-	      })
-	    );
-	  });
-	},
+      const out = []
+      for (const tipId of idx.tipByRoot.values()) {
+        if (idx.tomb.has(tipId)) continue
+        const node = idx.nodes.get(tipId)
+        if (!node) continue
+        out.push(buildTransfer(node))
+      }
+      return out
+    },
 
     async getTransferById(id) {
-      const ssb = await openSsb();
-      return new Promise((resolve, reject) => {
-        ssb.get(id, (err, msg) => {
-          if (err || !msg?.content || msg.content.type === 'tombstone') return reject(new Error('Not found'));
-          const c = msg.content;
-          resolve({
-            id,
-            from: c.from,
-            to: c.to,
-            concept: c.concept,
-            amount: c.amount,
-            createdAt: c.createdAt,
-            deadline: c.deadline,
-            confirmedBy: c.confirmedBy || [],
-            status: c.status,
-            tags: c.tags || [],
-            opinions: c.opinions || {},
-            opinions_inhabitants: c.opinions_inhabitants || []
-          });
-        });
-      });
+      const ssbClient = await openSsb()
+      const messages = await getAllMessages(ssbClient)
+      const idx = buildIndex(messages)
+
+      let tip = id
+      while (idx.child.has(tip)) tip = idx.child.get(tip)
+      if (idx.tomb.has(tip)) throw new Error("Not found")
+
+      const node = idx.nodes.get(tip)
+      if (node) return buildTransfer(node)
+
+      const msg = await getMsg(ssbClient, tip)
+      if (!msg?.content || msg.content.type !== "transfer") throw new Error("Not found")
+
+      const tmpNode = { key: tip, ts: msg.timestamp || 0, c: msg.content, author: msg.author }
+      return buildTransfer(tmpNode)
     },
 
     async createOpinion(id, category) {
-      const ssb = await openSsb();
-      const userId = ssb.id;
+      if (!categories.includes(category)) throw new Error("Invalid voting category")
+      const ssbClient = await openSsb()
+      const userId = ssbClient.id
+      const tipId = await this.resolveCurrentId(id)
+      const msg = await getMsg(ssbClient, tipId)
+
+      if (!msg?.content || msg.content.type !== "transfer") throw new Error("Transfer not found")
+
+      const t = msg.content
+      const voters = Array.isArray(t.opinions_inhabitants) ? t.opinions_inhabitants : []
+      if (voters.includes(userId)) throw new Error("Already voted")
+
+      const updated = {
+        ...t,
+        opinions: {
+          ...(t.opinions || {}),
+          [category]: ((t.opinions || {})[category] || 0) + 1
+        },
+        opinions_inhabitants: voters.concat(userId),
+        updatedAt: new Date().toISOString(),
+        replaces: tipId
+      }
+
+      const tombstone = { type: "tombstone", target: tipId, deletedAt: new Date().toISOString(), author: userId }
+      await new Promise((res, rej) => ssbClient.publish(tombstone, (e) => e ? rej(e) : res()))
+
       return new Promise((resolve, reject) => {
-        ssb.get(id, (err, msg) => {
-          if (err || !msg || msg.content?.type !== 'transfer') return reject(new Error('Transfer not found'));
-          if (msg.content.opinions_inhabitants?.includes(userId)) return reject(new Error('Already voted'));
-          const updated = {
-            ...msg.content,
-            opinions: {
-              ...msg.content.opinions,
-              [category]: (msg.content.opinions?.[category] || 0) + 1
-            },
-            opinions_inhabitants: [...(msg.content.opinions_inhabitants || []), userId],
-            updatedAt: new Date().toISOString(),
-            replaces: id
-          };
-          ssb.publish(updated, (err2, result) => err2 ? reject(err2) : resolve(result));
-        });
-      });
+        ssbClient.publish(updated, (e2, result) => e2 ? reject(e2) : resolve(result))
+      })
     }
-  };
-};
+  }
+}
 

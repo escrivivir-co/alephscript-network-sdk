@@ -30,7 +30,7 @@ if (!fs.existsSync(configFilePath)) {
       "tasksMod": "on",
       "marketMod": "on",
       "tribesMod": "on",
-      "governanceMod": "on",
+      "votesMod": "on",
       "reportsMod": "on",
       "opinionsMod": "on",
       "transfersMod": "on",
@@ -41,13 +41,16 @@ if (!fs.existsSync(configFilePath)) {
       "forumMod": "on",
       "jobsMod": "on",
       "projectsMod": "on",
-      "bankingMod": "on"
+      "bankingMod": "on",
+      "parliamentMod": "on",
+      "courtsMod": "on",
+      "favoritesMod": "on"
     },
     "wallet": {
       "url": "http://localhost:7474",
       "user": "",
       "pass": "",
-      "fee": "1"
+      "fee": "5"
     },
     "walletPub": {
       "url": "",
@@ -59,7 +62,8 @@ if (!fs.existsSync(configFilePath)) {
     },
     "ssbLogStream": {
       "limit": 2000
-    }
+    },
+    "homePage": "activity"
   };
   fs.writeFileSync(configFilePath, JSON.stringify(defaultConfig, null, 2));
 }

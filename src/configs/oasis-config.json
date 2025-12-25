@@ -23,7 +23,7 @@
     "eventsMod": "on",
     "tasksMod": "on",
     "marketMod": "on",
-    "governanceMod": "on",
+    "votesMod": "on",
     "tribesMod": "on",
     "reportsMod": "on",
     "opinionsMod": "on",
@@ -35,13 +35,16 @@
     "forumMod": "on",
     "jobsMod": "on",
     "projectsMod": "on",
-    "bankingMod": "on"
+    "bankingMod": "on",
+    "parliamentMod": "on",
+    "courtsMod": "on",
+    "favoritesMod": "on"
   },
   "wallet": {
     "url": "http://localhost:7474",
     "user": "",
     "pass": "",
-    "fee": ""
+    "fee": "5"
   },
   "walletPub": {
     "url": "",
@@ -53,5 +56,6 @@
   },
   "ssbLogStream": {
     "limit": 2000
-  }
+  },
+  "homePage": "activity"
 }

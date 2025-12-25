@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DockerizedOasisTutorial // Hackaton 26.12.25</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            color: #00ff41;
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Matrix rain effect */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.05;
+            z-index: -1;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                #00ff41 2px,
+                #00ff41 4px
+            );
+            animation: scan 8s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100vh; }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 1px solid #00ff41;
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            text-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41;
+            letter-spacing: 0.3em;
+            animation: flicker 3s infinite;
+        }
+        
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            92% { opacity: 1; }
+            93% { opacity: 0.8; }
+            94% { opacity: 1; }
+            95% { opacity: 0.9; }
+        }
+        
+        .subtitle {
+            color: #00aa30;
+            margin-top: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .terminal-prompt {
+            color: #00ff41;
+        }
+        
+        .terminal-prompt::before {
+            content: "$ ";
+            color: #ff6600;
+        }
+        
+        .section {
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid #00ff41;
+            border-radius: 4px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .section h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: #00ff41;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .section h2::before {
+            content: ">> ";
+            color: #ff6600;
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .gallery-item {
+            border: 1px solid #00aa30;
+            border-radius: 4px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .gallery-item:hover {
+            border-color: #00ff41;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+            transform: scale(1.02);
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .gallery-item .caption {
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.8);
+            font-size: 0.9rem;
+            color: #00aa30;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: transparent;
+            border: 2px solid #00ff41;
+            color: #00ff41;
+            text-decoration: none;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: #00ff41;
+            color: #0a0a0a;
+            box-shadow: 0 0 20px #00ff41;
+        }
+        
+        .btn-primary {
+            background: #00ff41;
+            color: #0a0a0a;
+        }
+        
+        .btn-primary:hover {
+            background: transparent;
+            color: #00ff41;
+        }
+        
+        .backlog-list {
+            list-style: none;
+            margin: 1rem 0;
+        }
+        
+        .backlog-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed #00aa30;
+        }
+        
+        .backlog-list li::before {
+            content: "[✓] ";
+            color: #00ff41;
+        }
+        
+        .backlog-list li.pending::before {
+            content: "[○] ";
+            color: #ff6600;
+        }
+        
+        .expansion-note {
+            background: rgba(255, 102, 0, 0.1);
+            border: 1px dashed #ff6600;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        
+        .expansion-note::before {
+            content: "⚡ EXPANSION PACK: ";
+            color: #ff6600;
+            font-weight: bold;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            margin-top: 3rem;
+            border-top: 1px solid #00aa30;
+            color: #00aa30;
+            font-size: 0.85rem;
+        }
+        
+        footer a {
+            color: #00ff41;
+        }
+        
+        .ascii-art {
+            font-size: 0.6rem;
+            line-height: 1.1;
+            color: #00aa30;
+            margin: 1rem 0;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        
+        .warning {
+            color: #ff6600;
+            background: rgba(255, 102, 0, 0.1);
+            border: 1px solid #ff6600;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        
+        .warning::before {
+            content: "⚠ WARNING: ";
+        }
+        
+        code {
+            background: rgba(0, 255, 65, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg"></div>
+    
+    <div class="container">
+        <header>
+            <div class="ascii-art">
+ ██████╗  █████╗ ███████╗██╗███████╗
+██╔═══██╗██╔══██╗██╔════╝██║██╔════╝
+██║   ██║███████║███████╗██║███████╗
+██║   ██║██╔══██║╚════██║██║╚════██║
+╚██████╔╝██║  ██║███████║██║███████║
+ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝╚══════╝
+            </div>
+            <h1>OASIS</h1>
+            <p class="subtitle">DockerizedOasisTutorial</p>
+            <p class="terminal-prompt">hackaton_261225 :: proyecto amateur NO OFICIAL</p>
+            <p style="color: #ff6600; font-size: 0.9rem; margin-top: 1rem;">⚠️ Proyecto experimental · No afiliado a SolarNET.HuB ni OASIS · Úsalo bajo tu propio riesgo</p>
+        </header>
+        
+        <section class="section">
+            <h2>¿QUÉ VAS A CONSEGUIR?</h2>
+            
+            <!-- IMAGEN PRINCIPAL: OASIS CORRIENDO EN EL NAVEGADOR -->
+            <div style="text-align: center; margin: 2rem 0;">
+                <div class="gallery-item" style="max-width: 900px; margin: 0 auto; border: 2px solid #00ff41; box-shadow: 0 0 30px rgba(0, 255, 65, 0.4);">
+                    <img src="assets/Oasis_UI.png" alt="OASIS funcionando en el navegador" style="width: 100%;">
+                    <div class="caption" style="background: #00ff41; color: #0a0a0a; font-size: 1.1rem; padding: 1rem;">
+                        >> TU RED SOCIAL DESCENTRALIZADA CORRIENDO EN http://localhost:3000
+                    </div>
+                </div>
+                <p style="margin-top: 1rem; font-size: 1.2rem; color: #00ff41; text-shadow: 0 0 10px #00ff41;">
+                    ⬆️ ESTO ES LO QUE CONSIGUES: OASIS v0.6.3 FUNCIONANDO ⬆️
+                </p>
+            </div>
+            
+            <!-- GALERÍA SECUNDARIA: EL PROCESO -->
+            <h3 style="color: #ff6600; margin: 2rem 0 1rem 0;">// EL CAMINO:</h3>
+            <div class="gallery">
+                <div class="gallery-item">
+                    <img src="assets/OASIS_IDE.png" alt="OASIS en VS Code">
+                    <div class="caption">> 1. IDE + Terminal + Agente AI = Deployment automatizado</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="assets/OASIS_DOCKER.png" alt="OASIS Docker Build">
+                    <div class="caption">> 2. docker-compose build && docker-compose up -d</div>
+                </div>
+                <div class="gallery-item">
+                    <img src="assets/OASIS_DockerDesktop.png" alt="Docker Desktop">
+                    <div class="caption">> 3. Contenedor healthy, GPU activa, modelo AI 3.8GB</div>
+                </div>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>BACKLOG DEL HACKATON</h2>
+            <p>Una sesión completa: de 0 a red social funcionando.</p>
+            
+            <ul class="backlog-list">
+                <li>Análisis profundo del repositorio</li>
+                <li>Pre-Hackaton: Requisitos sistema (VS Code, git, gh CLI)</li>
+                <li>Pre-Sprint: Actualización Oasis 0.4.9 → 0.6.3</li>
+                <li>Preparar entorno (volúmenes Docker)</li>
+                <li>Build imagen Docker (~208s)</li>
+                <li>Levantar contenedor + descarga modelo AI 3.8GB</li>
+                <li>Crear identidad SSB / perfil / avatar</li>
+                <li>Backup credenciales (CRÍTICO - sin esto pierdes tu identidad)</li>
+                <li>Usar invitación PUB → conectar a la red global</li>
+            </ul>
+            
+            <div class="expansion-note">
+                ECOin Wallet en Docker + integración con Oasis. 
+                Minería PoS/PoW/PoT con paneles solares.
+                <a href="https://github.com/escrivivir-co/alephscript-network-sdk/blob/hackaton_261225/SESION-BACKLOG-EXPANSION.md" style="color: #ff6600;">Ver SESION-BACKLOG-EXPANSION.md</a>
+            </div>
+            
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="https://github.com/escrivivir-co/alephscript-network-sdk/blob/hackaton_261225/SESION-BACKLOG.md" class="btn btn-primary">📋 VER BACKLOG COMPLETO</a>
+                <a href="https://github.com/escrivivir-co/alephscript-network-sdk/blob/hackaton_261225/SESION-BACKLOG-EXPANSION.md" class="btn" style="border-color: #ff6600; color: #ff6600;">⚡ EXPANSION: ECOin</a>
+                <a href="https://github.com/escrivivir-co/alephscript-network-sdk/blob/hackaton_261225/HACKATON_GUIDE.md" class="btn">🤖 GUÍA CONVERSACIONAL</a>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>QUICK START</h2>
+            <pre style="background: #000; padding: 1rem; border-radius: 4px; overflow-x: auto;">
+<span style="color: #ff6600;">$</span> git clone https://github.com/escrivivir-co/alephscript-network-sdk.git
+<span style="color: #ff6600;">$</span> cd alephscript-network-sdk
+<span style="color: #ff6600;">$</span> git checkout hackaton_261225
+<span style="color: #ff6600;">$</span> npm install
+<span style="color: #ff6600;">$</span> npm run build
+<span style="color: #ff6600;">$</span> docker-compose up -d
+<span style="color: #00ff41;"># → http://localhost:3000</span>
+            </pre>
+            
+            <div class="warning">
+                BACKUP TU CLAVE SSB: <code>./volumes-dev/ssb-data/secret</code><br>
+                Sin este archivo, tu identidad se pierde PARA SIEMPRE.
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>RECURSOS</h2>
+            <ul class="backlog-list">
+                <li><a href="https://solarnethub.com" style="color: #00ff41;">SolarNET.HuB</a> - Proyecto matriz</li>
+                <li><a href="https://ecoin.03c8.net" style="color: #00ff41;">ECOin</a> - Criptomoneda P2P</li>
+                <li><a href="https://wiki.solarnethub.com/socialnet/overview" style="color: #00ff41;">Wiki Oasis</a> - Documentación</li>
+                <li><a href="https://github.com/epsylon/oasis" style="color: #00ff41;">Oasis Upstream</a> - Código fuente original</li>
+            </ul>
+        </section>
+        
+        <footer>
+            <div class="ascii-art" style="font-size: 0.5rem; margin-bottom: 1rem;">
+┌─────────────────────────────────────────────────────────────┐
+│  "The Net is vast and infinite." - Motoko Kusanagi          │
+└─────────────────────────────────────────────────────────────┘
+            </div>
+            
+            <p><strong>AIPL v1.0 - Animus Iocandi Public License</strong></p>
+            <p style="margin-top: 0.5rem;">
+                Este repositorio se provee <strong>AS IS</strong>, sin garantía alguna.<br>
+                Proyecto amateur NO OFICIAL · <a href="https://github.com/escrivivir-co/alephscript-network-sdk/blob/hackaton_261225/LICENSE">Ver licencia completa</a>
+            </p>
+            <p style="margin-top: 0.5rem; color: #ff6600;">
+                ⚠️ No afiliado a SolarNET.HuB ni OASIS · Proyecto incompleto
+            </p>
+            <p style="margin-top: 1rem; color: #00aa30;">
+                Hackaton 26.12.25 :: escrivivir-co :: AlephLucas<br>
+                <code>@rZql/UwfYArm00RnK19+9HlBZhK7gxE++m/opHBG7vo=.ed25519</code>
+            </p>
+        </footer>
+    </div>
+    
+    <script>
+        // Efecto de typing en el terminal
+        document.querySelectorAll('.terminal-prompt').forEach(el => {
+            const text = el.textContent;
+            el.textContent = '';
+            let i = 0;
+            const type = () => {
+                if (i < text.length) {
+                    el.textContent += text.charAt(i);
+                    i++;
+                    setTimeout(type, 50);
+                }
+            };
+            setTimeout(type, 1000);
+        });
+    </script>
+</body>
+</html>

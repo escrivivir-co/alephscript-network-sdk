@@ -13,6 +13,174 @@ All notable changes to this project will be documented in this file.
 ### Security
 -->
 
+## v0.6.3 - 2025-12-10
+
+### Fixed
+
+ + Fixed mentions (Core plugin).
+ + Fixed feeds (Feed plugin).
+ + Minor details at market view (Market plugin).
+
+## v0.6.2 - 2025-12-05
+
+### Added
+
+ + Added a footer (Core plugin).
+ + Added favorites to media related modules (Favorites plugin).
+ + Added advanced search engine integration into modules (Search plugin).
+ 
+### Changed
+
+ * Added Oasis version at GUI (Core plugin).
+ + Added templates for reporting standardization (Reports plugin).
+ + Added market new functionalities (Market plugin).
+ + Added bookmarks new functionalities (Bookmarks plugin).
+ + Added jobs new filters (Jobs plugin).
+ 
+### Fixed
+
+ + Security fixes (Core plugin).
+ + Reports filters (Reports plugin).
+ + Tasks minor changes (Tasks plugin).
+ + Events minor changes (Events plugin).
+ + Votations minor changes (Votations plugin).
+ + Market minor changes (Market plugin).
+ + Projects minor changes (Projects plugin).
+ + Jobs minor changes (Jobs plugin).
+ + Transfers minor changes (Transfers plugin).
+
+## v0.6.1 - 2025-12-01
+
+### Changed
+
+ + Added more notifications for tribes activity (Activity plugin).
+ + Reordered filters (Opinions plugin).
+ 
+### Fixed
+
+ + Feed minor changes (Feed plugin).
+ + Tribes feed styles container (Tribes plugin).
+
+## v0.6.0 - 2025-11-29
+
+### Changed
+
+ + Added more opinion categories (Opinions plugin).
+ 
+### Fixed
+
+ + Tag counters (Tags plugin).
+ + Duplicated content when searching (Search plugin).
+ + Inhabitant-linked styles for Contact and PUB (Activity plugin).
+ + Old posts retrieving at inhabitant profile (Core plugin).
+ + Fixed threading comments (Core plugin).
+
+## v0.5.9 - 2025-11-28
+
+### Added
+
+ + Added fixed (also linked) threads into activity feed (Activity plugin).
+ 
+### Fixed
+
+ + Fixed laws stats (Parliament plugin).
+
+## v0.5.8 - 2025-11-25
+
+### Fixed
+
+ + Fixed post preview from a pre-cached context (Core plugin).
+ + Fixed tasks assignement to others different to the author (Core plugin).
+ + Fixed comments context adding different to blog/post (Core plugin).
+
+## v0.5.7 - 2025-11-24
+
+### Added
+
+ + Collapsible menu entries (Core plugin).
+
+### Fixed
+
+ + Remote videos fail to load at Firefox/LibreWolf (Core plugin).
+ + Fixed the comment query to return all posts whose root is the topic ID (Core plugin).
+ + Fixed render-format for latest posts (Core plugin).
+ + Fixed inhabitants listing for short-time activities (Activity plugin).
+
+## v0.5.6 - 2025-11-21
+
+### Added
+
+ + Extended post-commenting into various modules (bookmarks, images, audios, videos, documents, votations, events, tasks, reports, market, projects, jobs).
+ 
+### Changed
+
+ + Added details about current proposals at Courts (Courts plugin).
+ + Parliament proposal listing when voting process has started (Parliament plugin).
+ 
+### Fixed
+
+ + Votations deduplication applied when directly voting from Parliament (Votes plugin).
+ 
+## v0.5.5 - 2025-11-15
+
+### Added
+
+ + Conflicts resolution system (Courts plugin).
+ 
+## v0.5.4 - 2025-10-30
+
+### Fixed
+
+ + Content stats (Stats plugin).
+ + Non-avatar inhabitants listing (Inhabitants plugin).
+ + Inhabitants suggestions (Inhabitants plugin).
+ + Activity level (Inhabitants plugin).
+ + Parliament duplication (Parliament plugin).
+ + Added Parliament to blockexplorer (Blockexplorer plugin).
+
+## v0.5.3 - 2025-10-27
+
+### Fixed
+
+ + Tribes duplication (Tribes plugin + Activity plugin + Stats plugin).
+
+## v0.5.2 - 2025-10-22
+
+### Added
+
+ + Government system (Parliament plugin).
+ 
+### Fixed
+
+ + Forum category translations (Forum plugin).
+
+## v0.5.1 - 2025-09-26
+
+### Added
+
+ + Activity level measurement (Inhabitants plugin).
+ + Home page settings (Settings plugin).
+
+### Fixed
+
+ + ECOIn wallet addresses (Banking plugin).
+ + Tribes view (Tribes plugin).
+ + Inhabitants view (Inhabitants plugin).
+ + Avatar view (Main module).
+ + Forum posts (Forums plugin).
+ + Tribes info display (Search plugin).
+
+## v0.5.0 - 2025-09-20
+
+### Added
+
+ + Custom answer training (AI plugin).
+
+### Fixed
+
+ + Clean-SNH theme.
+ + AI learning (AI plugin).
+
 ## v0.4.9 - 2025-09-01
 
 ### Added

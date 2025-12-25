@@ -1,313 +1,195 @@
-# Oasis
-
-Oasis is a **libre, open-source, encrypted, peer-to-peer, distributed (not decentralized!) & federated**... project networking application 
-that helps you follow interesting content and discover new ones.
-
-  ![SNH](https://solarnethub.com/git/snh-oasis-logo3.jpg "SolarNET.HuB")
-
-Oasis redefines what it means to be connected in the modern world, giving people 
-the ability to control their online presence and interactions without the need for centralized institutions.
-
-----------
-
-## Frontend:
-
-Main features of the Oasis interface are:
-
- +  Data manipulation is not permitted due to the use of BLOCKCHAIN technology.
- +  No browser JavaScript. Just pure HTML+CSS. A really secure frontend!.
- +  Use your favorite web browser to read and write messages to the people you care about.
- +  Strong cryptography in every single point of the network.
- +  You are the center of your own distributed network. Online or offline, it works anywhere that you are.
- +  Initial identities are randomnly generated (no username or password required).
- +  No personal profile generated (no questions about gender, age, location, etc …).
- +  Automatic exif stripping (such as GPS coordinates) on images for better privacy.
- +  No email or associated mobile phone required.
- +  Automatic updates with new functionalities.
- 
-   ![SNH](https://solarnethub.com/git/snh-oasis-settings.png "SolarNET.HuB")
-      
-But it has others features that are also really interesting, for example:
-
- +  Support for multiple languages.
- 
-   ![SNH](https://solarnethub.com/git/snh-oasis-languages.png "SolarNET.HuB")
-
- +  Modularity to set your own environment.
- 
-   ![SNH](https://solarnethub.com/git/snh-oasis-modules.png "SolarNET.HuB")
-    
- +  Support for multiple themes.
- 
-   ![SNH](https://solarnethub.com/git/snh-clear-theme.png "SolarNET.HuB")
-   ![SNH](https://solarnethub.com/git/snh-purple-theme.png "SolarNET.HuB")
-   ![SNH](https://solarnethub.com/git/snh-matrix-theme.png "SolarNET.HuB")
-   
- +  Even a complex Reddit-styled forum system.
- 
-   ![SNH](https://solarnethub.com/git/snh-forum.png "SolarNET.HuB")
-   ![SNH](https://solarnethub.com/git/snh-forum-reply.png "SolarNET.HuB")
-   ![SNH](https://solarnethub.com/git/snh-activity-forum.png "SolarNET.HuB")
- 
-And much more, that we invite you to discover by yourself ;-)
+# 🐳 DockerizedOasisTutorial
 
-----------
+> **Tutorial amateur para correr OASIS en Docker**  
+> *Proyecto no oficial · Creado durante hackathon 2025*
 
-## Modules:
+⚠️ **DISCLAIMER**: Este es un proyecto experimental/educativo.  
+- ❌ **NO** es un producto de [SolarNET.HuB](https://solarnethub.com)  
+- ❌ **NO** es un producto de [OASIS](https://github.com/epsylon/oasis)  
+- ❌ **NO** está completo ni probado exhaustivamente  
+- ⚠️ **Úsalo bajo tu propio riesgo**
 
-Oasis is TRULY MODULAR. Here's a list of what comes deployed with the "core".
+![OASIS UI](docs/assets/Oasis_UI.png)
 
- + Agenda: Module to manage all your assigned items.
- + AI: Module to talk with a LLM called '42'.
- + Audios: Module to discover and manage audios.
- + Banking: Module to determine the real value of ECOIN and distribute a UBI using the common treasury.
- + BlockExplorer: Module to navigate the blockchain.
- + Bookmarks: Module to discover and manage bookmarks.	
- + Cipher: Module to encrypt and decrypt your text symmetrically (using a shared password).	
- + Documents: Module to discover and manage documents.	
- + Events: Module to discover and manage events.	
- + Feed: Module to discover and share short-texts (feeds).
- + Forums: Module to discover and manage forums.	
- + Governance: Module to discover and manage votes.	
- + Images: Module to discover and manage images.	
- + Invites: Module to manage and apply invite codes.	
- + Jobs: Module to discover and manage jobs.	
- + Legacy: Module to manage your secret (private key) quickly and securely.	
- + Latest: Module to receive the most recent posts and discussions.
- + Market: Module to exchange goods or services.
- + Multiverse: Module to receive content from other federated peers.	
- + Opinions: Module to discover and vote on opinions.	
- + Pixelia: Module to draw on a collaborative grid.	
- + Projects: Module to explore, crowd-funding and manage projects.
- + Popular: Module to receive posts that are trending, most viewed, or most commented on.	
- + Reports: Module to manage and track reports related to issues, bugs, abuses, and content warnings.	
- + Summaries: Module to receive summaries of long discussions or posts.	
- + Tags: Module to discover and explore taxonomy patterns (tags).	
- + Tasks: Module to discover and manage tasks.	
- + Threads: Module to receive conversations grouped by topic or question.
- + Topics: Module to receive discussion categories based on shared interests.	
- + Transfers: Module to discover and manage smart-contracts (transfers).	
- + Trending: Module to explore the most popular content.	
- + Tribes: Module to explore or create tribes (groups).	
- + Videos: Module to discover and manage videos.	
- + Wallet: Module to manage your digital assets (ECOin).	
+---
 
-Both the codebase and the inhabitants can generate new modules.
+## 📅 El Plan: Antes y Durante
 
-----------
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│   🗓️  ANTES DEL HACKATHON           🚀 DURANTE EL HACKATHON        │
+│   ─────────────────────              ─────────────────────          │
+│                                                                     │
+│   ✅ Clonas este repo               → Ya tienes OASIS corriendo    │
+│   ✅ Levantas Docker                → Tu avatar listo en la red    │
+│   ✅ Creas tu avatar                → Conectado al PUB             │
+│   ✅ Te conectas al PUB             → Participas desde el minuto 0 │
+│   ✅ Haces backup en USB            → Sin dramas de "perdí mi ID"  │
+│                                                                     │
+│   📖 Sigue HACKATON_GUIDE.md        🎯 A hackear se ha dicho       │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-## C-AI (collective artificial intelligence)
+---
 
-Oasis contains its own AI model called "42". 
+## 🏠 ¿Qué es OASIS?
 
-The main idea behind this implementation is to enable distributed learning generated through the collective action of many individuals, with the goal of redistributing the necessary processing load, as well as the ecological footprint and corporate bias.
+**OASIS** es una red social distribuida basada en [SSB (Secure Scuttlebutt)](https://scuttlebutt.nz).
 
-  ![SNH](https://solarnethub.com/git/oasis-ai-example2.png "SolarNET.HuB")
+- 🔐 **Tu identidad es tuya** - Par de claves Ed25519, sin servidores centrales
+- 🌐 **Mesh networking** - Funciona offline, sincroniza cuando hay conexión
+- 🤖 **IA colectiva integrada** - Modelo "42" entrenado con contenido de la red
+- 💰 **ECOin** - Criptomoneda interna + Renta Básica Universal
+- ⚖️ **Gobernanza** - Parlamento y Cortes descentralizadas
 
-Our AI is trained with content from the OASIS network and its purpose is to take action and obtain answers to individual, but also global, problems.
+> ⚠️ **Este tutorial NO es OASIS oficial** - Es un wrapper Docker experimental.
 
- + https://wiki.solarnethub.com/socialnet/ai
+---
 
-----------
+## 🚀 Quickstart (Docker)
 
-## ECOin (crypto-economy)
+```bash
+# 1. Clona el repo
+git clone https://github.com/AcidGambit/oasis-alephscript-network-sdk.git
+cd oasis-alephscript-network-sdk
 
-Oasis contains its own cryptocurrency. With it, you can exchange items and services in the marketplace. 
+# 2. Prepara volúmenes
+mkdir -p volumes-dev/{ssb-data,ai-models,logs}
 
-  ![SNH](https://solarnethub.com/git/oasis-tomatoes-example.png "SolarNET.HuB")
+# 3. Build + Run
+docker compose up --build -d
 
-You can also receive a -Universal Basic Income- if you contribute to the Tribes and their coordinated actions.
+# 4. Accede
+open http://localhost:3000
+```
 
- + https://ecoin.03c8.net
- 
-## Banking (crypto-economy)
+**Requisitos**: Docker 24+, 8GB RAM mínimo. GPU NVIDIA opcional.
 
-Oasis contains its own UBI (Universal Basic Income), distributed weekly using ECOin, and calculated by our AI through positive and efficient participation and trust.
+---
 
-  ![SNH](https://solarnethub.com/git/oasis-banking.png "SolarNET.HuB")
+## 📚 Documentación
 
-----------
+| Documento | Descripción |
+|-----------|-------------|
+| [HACKATON_GUIDE.md](HACKATON_GUIDE.md) | 💬 Conversación completa con Agente IA |
+| [SESION-BACKLOG.md](SESION-BACKLOG.md) | ✅ Backlog de tareas completadas |
+| [SESION-BACKLOG-EXPANSION.md](SESION-BACKLOG-EXPANSION.md) | ⚡ Expansión: ECOin wallet en Docker |
+| [docs/](docs/index.html) | 🌐 Landing page para GitHub Pages |
+| [GPU_SIMPLE.md](GPU_SIMPLE.md) | 🎮 Configuración de GPU para IA local |
 
-## L.A.R.P.
+---
 
-Oasis contains a L.A.R.P. (real action role-playing) structured around 1+8 main houses. 
+## ⚠️ BACKUP: No lo olvides
 
-  ![SNH](https://solarnethub.com/git/oasis-larp-schema.jpg "SolarNET.HuB")
+Tu identidad es un archivo llamado `secret`. **Si lo pierdes, pierdes tu avatar para siempre.**
 
-The main objective is to empower the inhabitants to organize around specific proposals and generate federated governments with specific characteristics.
+```bash
+# Ubicación en tu máquina (con volúmenes Docker)
+./volumes-dev/ssb-data/secret
 
- + https://wiki.solarnethub.com/socialnet/roleplaying#how_to_play
- 
-Check "The Houses" to review which one fit better with your ambitions:
+# COPIA A USB EXTERNO ← HAZLO
+cp ./volumes-dev/ssb-data/secret /media/TU_USB/oasis-backup/
+```
 
- + https://wiki.solarnethub.com/socialnet/roleplaying#the_houses
+---
 
-----------
-  
-## Invite codes (for PUBs and TRIBES):
+## 🔗 Enlaces al Proyecto Original
 
-Oasis is a TRUSTNET. This means you need an invitation code to enter the PUBs (managed by inhabitants or hacklabs).
+Este tutorial dockeriza el proyecto OASIS de SolarNET.HuB:
 
-Similarly, TRIBES (groups in Oasis) require an entry code.
+- 🏠 **OASIS oficial**: [solarnethub.com](https://solarnethub.com)
+- 📖 **Wiki**: [wiki.solarnethub.com](https://wiki.solarnethub.com)
+- 💻 **Código fuente**: [github.com/epsylon/oasis](https://github.com/epsylon/oasis)
+- 💰 **ECOin**: [ecoin.03c8.net](https://ecoin.03c8.net)
 
-  ![SNH](https://solarnethub.com/git/snh-oasis-invites.png "SolarNET.HuB")
-  
-While you can use it and connect to any nodes you want, it's a good idea to get an entry code to connect with the community.
+---
 
-So you'll need to know someone, or participate in a collective action that distributes invitation codes, to see everything.
+## 🎭 Para Freaks, Groupies y Satélites
 
- + https://wiki.solarnethub.com/socialnet/snh#finding_inhabitants
-  
-----------
+⚠️ **IMPORTANTE**: Este repositorio es un **proyecto amateur NO OFICIAL**.
 
-## Architecture:
+Creado con la intención de:
 
-Oasis uses a gossip protocol or epidemic protocol which is a procedure or process of computer peer-to peer communication 
-that is based on the way epidemics spread.
+1. **Documentar** el proceso de preparación para un hackathon
+2. **Facilitar** la entrada a nuevos habitantes de la red
+3. **Experimentar** con agentes IA guiando el proceso
 
-  ![SNH](https://solarnethub.com/git/snh-meshnet.png "SolarNET.HuB")
+*¿Eres un freak de la descentralización? ¿Un groupie del SSB?*
 
-This means that information is able to distribute across multiple machines, without requiring direct connections between them. 
+**Bienvenido/a.** Pero recuerda: esto es experimental y puede fallar.
 
-  ![SNH](https://solarnethub.com/git/gossip-graph1.png "SolarNET.HuB")
+---
 
-Even though Alice and Dan lack a direct connection, they can still exchange feeds: 
+## 📸 Galería del Proceso
 
-  ![SNH](https://solarnethub.com/git/gossip-graph2.png "SolarNET.HuB")
- 
-This is because gossip creates “transitive” connections between computers. Dan's messages travel through Carla and the PUB 
-to reach Alice, and visa-versa. 
+| Setup en VS Code | Docker Desktop | Docker Compose |
+|------------------|----------------|----------------|
+| ![IDE](docs/assets/OASIS_IDE.png) | ![Desktop](docs/assets/OASIS_DockerDesktop.png) | ![Docker](docs/assets/OASIS_DOCKER.png) |
 
-----------
+---
 
-## Backend:
+## 📜 Licencia
 
-Oasis is based on a mesh network and self-hosted social media ecosystem called Secure Scuttlebutt (SSB). 
+**[Animus Iocandi Public License (AIPL) v1.0](LICENSE)** - *"intención de bromear"*
 
-SSB uses a blockchain like append-only data structure and a fully decentralized P2P network. There are no servers or authorities 
-of any kind. Like a crypto transaction, SSB posts are censorship-resistant and are replicated to the entire network.
+Este repositorio es un proyecto amateur/experimental sin garantía alguna.
 
-  ![SNH](https://solarnethub.com/git/ssb-participants-perspective.png "SolarNET.HuB")
+El código de OASIS pertenece a sus creadores en [SolarNET.HuB](https://solarnethub.com) bajo GNU AGPL v3.
 
-In SSB each user hosts their own content and the content of the peers they follow, which provides fault tolerance and 
-eventual consistency. 
+> *"Si algo de aquí te sirve, genial. Si se rompe, no nos culpes."*
 
-----------
+---
 
-## Installing:
+## 🔧 RESTART vs BUILD
 
-Follow ['INSTALL.md'](docs/install/install.md) to build and install it on your device.
+### 📋 **RESTART** (`docker-compose restart`)
 
-----------
+- ✅ Cambios en código fuente (`.js`, `.mjs`)
+- ✅ Cambios en variables de entorno
+- ✅ Cambios en configuración
 
-## Setup & Deploy:
+### 🏗️ **BUILD** (`docker compose build`)
 
-Visit ['Settings'](https://wiki.solarnethub.com/socialnet/snh#settings_minimal) to learn how to choose your language, set a theme & configure your avatar.
+- ✅ Cambios en el Dockerfile
+- ✅ Cambios en dependencias (nuevos paquetes)
+- ✅ Primera vez que construyes
 
-----------
+---
 
-## Multiverse:
+<details>
+<summary>📋 README Original de OASIS (click para expandir)</summary>
 
-Join ['PUB: "La Plaza"'](https://wiki.solarnethub.com/socialnet/snh-pub) to start to be connected with other interesting projects in the Multiverse.
+## Oasis
 
-  ![SNH](https://solarnethub.com/git/snh-oasis_federation-2.png "SolarNET.HuB")
-  
-This allows you to communicate and access content from outside the [project network](https://wiki.solarnethub.com/socialnet/overview). 
+Oasis is a **libre, open-source, encrypted, peer-to-peer, distributed & federated** project networking application.
 
-  ![SNH](https://solarnethub.com/git/snh-multiverse.png "SolarNET.HuB")
+### Modules incluidos:
+- Agenda, AI, Audios, Banking, BlockExplorer, Bookmarks, Cipher
+- Courts, Documents, Events, Favorites, Feed, Forums, Governance
+- Images, Invites, Jobs, Legacy, Latest, Market, Multiverse
+- Opinions, Parliament, Pixelia, Projects, Popular, Reports
+- Summaries, Tags, Tasks, Threads, Topics, Transfers
+- Trending, Tribes, Videos, Wallet
 
-----------
+### Links oficiales:
+- Website: https://solarnethub.com
+- Documentation: https://wiki.solarnethub.com
+- Code of Conduct: https://wiki.solarnethub.com/docs/code_of_conduct
 
-## SNH-Hub (for HackLabs):
+</details>
 
-The public content of the ['PUB: "La Plaza"'](https://wiki.solarnethub.com/socialnet/snh-pub) can be visited from outside the [project network](https://wiki.solarnethub.com/socialnet/overview), through the [World Wide Web](https://en.wikipedia.org/wiki/World_Wide_Web) (aka [Clearnet](https://en.wikipedia.org/wiki/Clearnet_(networking))).
+---
 
-  ![SNH](https://solarnethub.com/git/snh-pub-feed.png "SolarNET.HuB") 
-  
-Just visit: https://pub.solarnethub.com/
+```
+  ╔═══════════════════════════════════════════════════════════╗
+  ║                                                           ║
+  ║   Hecho con 🤖 + ☕ durante el Hackathon 2025             ║
+  ║                                                           ║
+  ║   ⚠️ PROYECTO AMATEUR - NO OFICIAL - SIN GARANTÍA         ║
+  ║                                                           ║
+  ╚═══════════════════════════════════════════════════════════╝
+```
 
-  ![SNH](https://solarnethub.com/git/snh-pub-laplaza.png "SolarNET.HuB")
-  
-And also you can visit periodically the public statistic of the SNH-PUB:
-
-  ![SNH](https://solarnethub.com/git/snh-pub-stats.png "SolarNET.HuB")
-  
-See stats: https://laplaza.solarnethub.com/
-
-----------
-
-## Roadmap:
-
-Review ['Roadmap'](https://wiki.solarnethub.com/project/roadmap#the_project_network) to know about some required functionalities that can be implemented.
-
-----------
-
-## Translations:
-
-Oasis supports multiple languages. One way to contribute is to translate the interface into your language so other people in your region can use it more intuitively.
-
- + https://wiki.solarnethub.com/socialnet/snh#choose_language
-
-----------
-
-## Development:
-
-Oasis is completely coded in: node.js, HTML5 + CSS.
-
-Check ['Call 4 Hackers'](https://wiki.solarnethub.com/community/hackers) for contributing with developments.
-
-----------
-
-## Links:
-
- + SNH Website: https://solarnethub.com
- + Kräkens.Lab: https://krakenslab.com
- + Documentation: https://wiki.solarnethub.com
- + Research: https://wiki.solarnethub.com/docs/research
- + Code of Conduct: https://wiki.solarnethub.com/docs/code_of_conduct
- + The KIT: https://wiki.solarnethub.com/kit/overview
- + Ecosystem: https://wiki.solarnethub.com/socialnet/ecosystem
- + Project Network: https://wiki.solarnethub.com/socialnet/snh#the_project_network
- + Oasis: https://wiki.solarnethub.com/socialnet/overview
- + ECOin: https://wiki.solarnethub.com/ecoin/overview
- + Role-playing (L.A.R.P): https://wiki.solarnethub.com/socialnet/roleplaying
- + Warehouse: https://wiki.solarnethub.com/stock/submit_request
- + THS: https://thehackerstyle.com
- + PeerTube: https://video.hardlimit.com/c/thehackerstyle/videos
- + Youtube: https://www.youtube.com/@thehackerstyle
- + Twitch: https://twitch.tv/thehackerstyle
-
-
-🔧 **RESTART vs BUILD - Cuándo usar cada uno:**
------------------------------------------------
-
-### 📋 **RESTART (`docker-compose restart` o `npm run restart`)**
-
-**Cuándo usar:**
-
--   ✅ Cambios en **código fuente** (archivos `.js`, `.mjs`, etc.)
--   ✅ Cambios en **variables de entorno** del [docker-compose.yml](vscode-file://vscode-app/c:/Users/oracl/AppData/Local/Programs/Microsoft%20VS%20Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html)
--   ✅ Cambios en **configuración** ([package.json](vscode-file://vscode-app/c:/Users/oracl/AppData/Local/Programs/Microsoft%20VS%20Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html), archivos de config)
--   ✅ El contenedor ya existe y solo necesitas reiniciarlo
-
-**Lo que hace:**
-
--   Para el contenedor existente
--   Lo vuelve a iniciar con la misma imagen
--   **NO reconstruye** la imagen Docker
-
-### 🏗️ **BUILD ([npm run build](vscode-file://vscode-app/c:/Users/oracl/AppData/Local/Programs/Microsoft%20VS%20Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) o [npm run build:no-cache](vscode-file://vscode-app/c:/Users/oracl/AppData/Local/Programs/Microsoft%20VS%20Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html))**
-
-**Cuándo usar:**
-
--   ✅ Cambios en el **Dockerfile**
--   ✅ Cambios en **dependencias** ([package.json](vscode-file://vscode-app/c:/Users/oracl/AppData/Local/Programs/Microsoft%20VS%20Code/resources/app/out/vs/code/electron-browser/workbench/workbench.html) - nuevos paquetes)
--   ✅ Cambios en **archivos copiados** durante el build
--   ✅ Cambios en **comandos de instalación** del Dockerfile
--   ✅ Primera vez que construyes el proyecto
-
-**Lo que hace:**
-
--   Reconstruye completamente la imagen Docker
--   Instala dependencias nuevas
--   Aplica cambios del Dockerfile
+*¿Preguntas? Este proyecto no tiene soporte oficial.*
