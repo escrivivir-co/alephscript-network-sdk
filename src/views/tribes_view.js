@@ -12,7 +12,6 @@ const paginateFeedTribesView = (feed, page = 1, itemsPerPage = 5) => {
 
 const renderPaginationTribesView = (page, totalPages, filter) => {
   if (totalPages <= 1) return '';
-
   return div({ class: 'pagination' },
     page > 1 ? form({ method: 'GET', action: '/tribes' },
       input({ type: 'hidden', name: 'filter', value: filter }),
@@ -31,7 +30,6 @@ const renderFeedTribesView = (tribe, page, query, filter) => {
   const feed = Array.isArray(tribe.feed) ? tribe.feed : [];
   const feedFilter = (query.feedFilter || 'TOP').toUpperCase();
   let filteredFeed = feed;
-
   if (feedFilter === 'MINE') filteredFeed = feed.filter(m => m.author === userId);
   if (feedFilter === 'RECENT') {
     const last24h = Date.now() - 86400000;
@@ -46,12 +44,14 @@ const renderFeedTribesView = (tribe, page, query, filter) => {
         return dateB - dateA;
       });
   }
-  if (feedFilter === 'ALL') filteredFeed = [...feed].sort((a, b) => b.date - a.date);
+  if (feedFilter === 'ALL') filteredFeed = [...feed].sort((a, b) => {
+    const da = typeof a.date === "string" ? Date.parse(a.date) : a.date;
+    const db = typeof b.date === "string" ? Date.parse(b.date) : b.date;
+    return db - da;
+  });
   if (feedFilter === 'TOP') filteredFeed = [...feed].sort((a, b) => (b.refeeds || 0) - (a.refeeds || 0));
-
   const totalPages = Math.ceil(filteredFeed.length / 5);
   const paginatedFeed = paginateFeedTribesView(filteredFeed, page);
-
   return div({ class: 'tribe-feed' },
     div({ class: 'feed-actions', style: 'margin-bottom:8px;' },
       ['TOP', 'MINE', 'ALL', 'RECENT'].map(f =>
@@ -67,12 +67,15 @@ const renderFeedTribesView = (tribe, page, query, filter) => {
       : div({ class: 'feed-list' },
           paginatedFeed.map(m => div({ class: 'feed-item' },
             div({ class: 'feed-row' },
-              div({ class: 'refeed-column' },
-                h1(`${m.refeeds || 0}`),
-                !m.refeeds_inhabitants.includes(userId)
-                  ? form({ method: 'POST', action: `/tribes/${encodeURIComponent(tribe.id)}/refeed/${encodeURIComponent(m.id)}` }, button({ class: 'refeed-btn' }, i18n.tribeFeedRefeed))
-                  : p(i18n.alreadyRefeeded)
-              ),
+		div({ class: 'refeed-column' },
+		  h1(`${m.refeeds || 0}`),
+		  !(m.refeeds_inhabitants || []).includes(userId)
+		    ? form(
+			{ method: 'POST', action: `/tribes/${encodeURIComponent(tribe.id)}/refeed/${encodeURIComponent(m.id)}` },
+			button({ class: 'refeed-btn' }, i18n.tribeFeedRefeed)
+		      )
+		    : null
+		),
               div({ class: 'feed-main' },
                 p(`${new Date(m.date).toLocaleString()} — `, a({ class: 'user-link', href: `/author/${encodeURIComponent(m.author)}` }, m.author)),
                 br,
@@ -81,12 +84,13 @@ const renderFeedTribesView = (tribe, page, query, filter) => {
             )
           ))
         ),
-    tribe.members.includes(userId)
-      ? form({ method: 'POST', action: `/tribes/${encodeURIComponent(tribe.id)}/message` },
-          textarea({ name: 'message', rows: 4, cols: 50, maxlength: 280, placeholder: i18n.tribeFeedMessagePlaceholder }),
-          button({ type: 'submit' }, i18n.tribeFeedSend)
-        )
-      : null,
+	tribe.members.includes(userId)
+	  ? form(
+	      { class: 'tribe-feed-compose', method: 'POST', action: `/tribes/${encodeURIComponent(tribe.id)}/message` },
+	      textarea({ name: 'message', rows: 4, maxlength: 280, placeholder: i18n.tribeFeedMessagePlaceholder }),
+	      button({ type: 'submit', class: 'tribe-feed-send' }, i18n.tribeFeedSend)
+	    )
+	  : null,
     renderPaginationTribesView(page, totalPages, filter)
   );
 };
@@ -129,20 +133,20 @@ exports.renderInvitePage = (inviteCode) => {
 
 exports.tribesView = async (tribes, filter, tribeId, query = {}) => {
   const now = Date.now();
-  const search = (query.search || '').toLowerCase(); 
+  const search = (query.search || '').toLowerCase();
 
   const filtered = tribes.filter(t => {
-  return (
-    filter === 'all' ? t.isAnonymous === false : 
-    filter === 'mine' ? t.author === userId :
-    filter === 'membership' ? t.members.includes(userId) :
-    filter === 'recent' ? t.isAnonymous === false && ((typeof t.createdAt === 'string' ? Date.parse(t.createdAt) : t.createdAt) >= now - 86400000 ) :
-    filter === 'top' ? t.isAnonymous === false :
-    filter === 'gallery' ? t.isAnonymous === false :
-    filter === 'larp' ? t.isAnonymous === false && t.isLARP === true : 
-    filter === 'create' ? true : 
-    filter === 'edit' ? true : 
-    false 
+    return (
+      filter === 'all' ? t.isAnonymous === false :
+      filter === 'mine' ? t.author === userId :
+      filter === 'membership' ? t.members.includes(userId) :
+      filter === 'recent' ? t.isAnonymous === false && ((typeof t.createdAt === 'string' ? Date.parse(t.createdAt) : t.createdAt) >= now - 86400000 ) :
+      filter === 'top' ? t.isAnonymous === false :
+      filter === 'gallery' ? t.isAnonymous === false :
+      filter === 'larp' ? t.isAnonymous === false && t.isLARP === true :
+      filter === 'create' ? true :
+      filter === 'edit' ? true :
+      false
     );
   });
 
@@ -155,7 +159,11 @@ exports.tribesView = async (tribes, filter, tribeId, query = {}) => {
 
   const sorted = filter === 'top'
     ? [...searched].sort((a, b) => b.members.length - a.members.length)
-    : [...searched].sort((a, b) => b.createdAt - a.createdAt);
+    : [...searched].sort((a, b) => {
+        const ca = typeof a.createdAt === 'string' ? Date.parse(a.createdAt) : a.createdAt;
+        const cb = typeof b.createdAt === 'string' ? Date.parse(b.createdAt) : b.createdAt;
+        return cb - ca;
+      });
 
   const title =
     filter === 'recent' ? i18n.tribeRecentSectionTitle :
@@ -180,7 +188,7 @@ exports.tribesView = async (tribes, filter, tribeId, query = {}) => {
   );
 
   const modeButtons = div({ class: 'mode-buttons', style: 'display:flex; gap:8px; margin-top:16px;' },
-    ['recent','all','mine','membership','larp','top','gallery'].map(f =>
+    ['all','recent','mine','membership','larp','top','gallery'].map(f =>
     form({ method: 'GET', action: '/tribes' },
       input({ type: 'hidden', name: 'filter', value: f }),
       button({ type: 'submit', class: filter === f ? 'filter-btn active' : 'filter-btn' },
@@ -236,15 +244,6 @@ exports.tribesView = async (tribes, filter, tribeId, query = {}) => {
       option({ value: 'open', selected: tribeToEdit.inviteMode === 'open' ? 'selected' : undefined }, i18n.tribeOpen)
     ),
     br(), br(),   
-    
-   // label({ for: 'isLARP' }, i18n.tribeIsLARPLabel),
-   // br,
-   // select({ name: 'isLARP', id: 'isLARP' },
-   //   option({ value: 'true', selected: tribeToEdit.isLARP === true ? 'selected' : undefined }, i18n.tribeYes),
-   //   option({ value: 'false', selected: tribeToEdit.isLARP === false ? 'selected' : undefined }, i18n.tribeNo)
-   // ),
-   // br(), br(),
-    
     button({ type: 'submit' }, isEdit ? i18n.tribeUpdateButton : i18n.tribeCreateButton)
     )
   ) : null;
@@ -254,41 +253,45 @@ exports.tribesView = async (tribes, filter, tribeId, query = {}) => {
       ? `/blob/${encodeURIComponent(t.image)}`
       : '/assets/images/default-tribe.png';
 
-    const infoCol = div({ class: 'tribe-card', style: 'width:50%' },
-      filter === 'mine' ? div({ class: 'tribe-actions' },
+    const infoCol = div({ class: 'tribe-card', style: 'width:50%; background:#2c2f33; border:1px solid #444; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px;' },
+      div({ style: 'position:relative; border-radius:12px; overflow:hidden; box-shadow:0 10px 24px rgba(0,0,0,.35);' },
+        img({ src: imageSrc, style: 'display:block; width:100%; height:260px; object-fit:cover; transform:translateZ(0); filter:saturate(1.05) contrast(1.02);' }),
+      ),
+      h2(t.title),
+      t.description ? p({ style: 'font-size:16px; line-height:1.55; color:#cfd3e1; margin:4px 0 6px 0;' }, ...renderUrl(t.description)) : null,
+      div({ style: 'display:flex; gap:.6em; flex-wrap:wrap;' },
+        t.location ? p({ style: 'color:#9aa3b2;' }, `${i18n.tribeLocationLabel.toUpperCase()}: `, ...renderUrl(t.location)) : null,
+        p({ style: 'color:#9aa3b2;' }, `${i18n.tribeIsAnonymousLabel}: ${t.isAnonymous ? i18n.tribePrivate : i18n.tribePublic}`),
+        p({ style: 'color:#9aa3b2;' }, `${i18n.tribeModeLabel}: ${t.inviteMode.toUpperCase()}`),
+        p({ style: 'color:#9aa3b2;' }, `${i18n.tribeLARPLabel}: ${t.isLARP ? i18n.tribeYes : i18n.tribeNo}`)
+      ),
+      h2(`${i18n.tribeMembersCount}: ${t.members.length}`),
+      t.tags && t.tags.filter(Boolean).length ? div({ style: 'display:flex; gap:.6em; flex-wrap:wrap;' }, t.tags.filter(Boolean).map(tag =>
+        a({ href: `/search?query=%23${encodeURIComponent(tag)}`, class: 'tag-link', style: 'margin-right:0.8em;margin-bottom:0.5em;' }, `#${tag}`)
+      )) : null,
+      p(`${i18n.tribeCreatedAt}: ${new Date(t.createdAt).toLocaleString()}`),
+      p(a({ class: 'user-link', href: `/author/${encodeURIComponent(t.author)}` }, t.author)),
+      filter === 'mine' ? div({ class: 'tribe-actions', style: 'display:flex; gap:8px; justify-content:flex-end;' },
         form({ method: 'GET', action: `/tribes/edit/${encodeURIComponent(t.id)}` }, button({ type: 'submit' }, i18n.tribeUpdateButton)),
         form({ method: 'POST', action: `/tribes/delete/${encodeURIComponent(t.id)}` }, button({ type: 'submit' }, i18n.tribeDeleteButton))
       ) : null,
-      div({ style: 'display: flex; justify-content: space-between;' },
-        form({ method: 'GET', action: `/tribe/${encodeURIComponent(t.id)}` },
-          button({ type: 'submit', class: 'filter-btn' }, i18n.tribeviewTribeButton)
+      t.members.includes(userId) ? div({ class: 'member-actions', style: 'display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;' },
+        form({ method: 'GET', action: `/tribe/${encodeURIComponent(t.id)}`, style: 'position:absolute; bottom:12px; right:12px;' },
+          button({ type: 'submit', class: 'filter-btn' }, i18n.tribeviewTribeButton.toUpperCase())
         ),
-        h2(t.title)
-      ),
-      p(`${i18n.tribeIsAnonymousLabel}: ${t.isAnonymous ? i18n.tribePrivate : i18n.tribePublic}`),
-      p(`${i18n.tribeModeLabel}: ${t.inviteMode.toUpperCase()}`),
-      p(`${i18n.tribeLARPLabel}: ${t.isLARP ? i18n.tribeYes : i18n.tribeNo}`),
-      t.location ? p(`${i18n.tribeLocationLabel}: `, ...renderUrl(t.location)) : null,
-      img({ src: imageSrc }),
-      t.description ? p(...renderUrl(t.description)) : null,
-      h2(`${i18n.tribeMembersCount}: ${t.members.length}`),
-      t.tags && t.tags.filter(Boolean).length ? div(t.tags.filter(Boolean).map(tag =>
-        a({ href: `/search?query=%23${encodeURIComponent(tag)}`, class: 'tag-link', style: 'margin-right:0.8em;margin-bottom:0.5em;' }, `#${tag}`)
-      )) : null,    
-      p(`${i18n.tribeCreatedAt}: ${new Date(t.createdAt).toLocaleString()}`),
-      p(a({ class: 'user-link', href: `/author/${encodeURIComponent(t.author)}` }, t.author)),
-      t.members.includes(userId) ? div(
-      form({ method: 'POST', action: '/tribes/generate-invite' }, 
-        input({ type: 'hidden', name: 'tribeId', value: t.id }),
-        button({ type: 'submit' }, i18n.tribeGenerateInvite)
-      ),
-      form({ method: 'POST', action: `/tribes/leave/${encodeURIComponent(t.id)}` }, button({ type: 'submit' }, i18n.tribeLeaveButton))
+        form({ method: 'POST', action: '/tribes/generate-invite' },
+          input({ type: 'hidden', name: 'tribeId', value: t.id }),
+          button({ type: 'submit' }, i18n.tribeGenerateInvite)
+        ),
+        form({ method: 'POST', action: `/tribes/leave/${encodeURIComponent(t.id)}` },
+          button({ type: 'submit' }, i18n.tribeLeaveButton)
+        )
       ) : null
     );
 
     const feedCol = renderFeedTribesView(t, query.page || 1, query, filter);
 
-    return div({ class: 'tribe-row', style: 'display:flex; gap:24px; margin-bottom:32px;' }, infoCol, feedCol);
+    return div({ class: 'tribe-row', style: 'display:flex; gap:24px; margin-bottom:32px; align-items:flex-start;' }, infoCol, feedCol);
   });
 
   return template(
@@ -297,16 +300,16 @@ exports.tribesView = async (tribes, filter, tribeId, query = {}) => {
     section(filters),
     section(modeButtons),
     section(
-    (filter === 'create' || filter === 'edit')
-      ? createForm 
-      : filter === 'gallery'
-        ? renderGallery(sorted.filter(t => t.isAnonymous === false)) 
-        : div({ class: 'tribe-grid', style: 'display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;' },
-            tribeCards.length > 0 ? tribeCards : p(i18n.noTribes)
-        )
+      (filter === 'create' || filter === 'edit')
+        ? createForm
+        : filter === 'gallery'
+          ? renderGallery(sorted.filter(t => t.isAnonymous === false))
+          : div({ class: 'tribe-grid', style: 'display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;' },
+              tribeCards.length > 0 ? tribeCards : p(i18n.noTribes)
+            )
      ),
-  ...renderLightbox(sorted.filter(t => t.isAnonymous === false))
-  ); 
+    ...renderLightbox(sorted.filter(t => t.isAnonymous === false))
+  );
 };
 
 const renderFeedTribeView = async (tribe, query = {}, filter) => {
@@ -330,7 +333,11 @@ const renderFeedTribeView = async (tribe, query = {}, filter) => {
       });
   }
   if (feedFilter === 'ALL') {
-    filteredFeed = [...feed].sort((a, b) => b.date - a.date);
+    filteredFeed = [...feed].sort((a, b) => {
+      const da = typeof a.date === 'string' ? Date.parse(a.date) : a.date;
+      const db = typeof b.date === 'string' ? Date.parse(b.date) : b.date;
+      return db - da;
+    });
   }
   if (feedFilter === 'TOP') {
     filteredFeed = [...feed].sort((a, b) => (b.refeeds || 0) - (a.refeeds || 0));
@@ -350,12 +357,15 @@ const renderFeedTribeView = async (tribe, query = {}, filter) => {
       : div({ class: 'feed-list' },
           filteredFeed.map(m => div({ class: 'feed-item' },
             div({ class: 'feed-row' },
-              div({ class: 'refeed-column' },
-                h1(`${m.refeeds || 0}`),
-                !m.refeeds_inhabitants.includes(userId)
-                  ? form({ method: 'POST', action: `/tribe/${encodeURIComponent(tribe.id)}/refeed/${encodeURIComponent(m.id)}` }, button({ class: 'refeed-btn' }, i18n.tribeFeedRefeed))
-                  : p(i18n.alreadyRefeeded)
-              ),
+		div({ class: 'refeed-column' },
+		  h1(`${m.refeeds || 0}`),
+		  !(m.refeeds_inhabitants || []).includes(userId)
+		    ? form(
+			{ method: 'POST', action: `/tribe/${encodeURIComponent(tribe.id)}/refeed/${encodeURIComponent(m.id)}` },
+			button({ class: 'refeed-btn' }, i18n.tribeFeedRefeed)
+		      )
+		    : null
+		),
               div({ class: 'feed-main' },
                 p(`${new Date(m.date).toLocaleString()} — `, a({ class: 'user-link', href: `/author/${encodeURIComponent(m.author)}` }, m.author)),
                 br,
@@ -367,41 +377,62 @@ const renderFeedTribeView = async (tribe, query = {}, filter) => {
   );
 };
 
-exports.tribeView = async (tribe, userId, query) => {
+exports.tribeView = async (tribe, userIdParam, query) => {
   if (!tribe) {
     return div({ class: 'error' }, 'Tribe not found!');
   }
+
   const feedFilter = (query.feedFilter || 'TOP').toUpperCase();
   const imageSrc = tribe.image
     ? `/blob/${encodeURIComponent(tribe.image)}`
     : '/assets/images/default-tribe.png';
   const pageTitle = tribe.title;
+
   const tribeDetails = div({ class: 'tribe-details' },
-    h2(tribe.title),
-    p(`${i18n.tribeIsAnonymousLabel}: ${tribe.isAnonymous ? i18n.tribePrivate : i18n.tribePublic}`),
-    p(`${i18n.tribeModeLabel}: ${tribe.inviteMode.toUpperCase()}`),
-    p(`${i18n.tribeLARPLabel}: ${tribe.isLARP ? i18n.tribeYes : i18n.tribeNo}`),
-    tribe.location ? p(`${i18n.tribeLocationLabel}: `, ...renderUrl(tribe.location)) : null,
-    img({ src: imageSrc, alt: tribe.title }),
-    tribe.description ? p(...renderUrl(tribe.description)) : null,
-    h2(`${i18n.tribeMembersCount}: ${tribe.members.length}`),
-    tribe.tags && tribe.tags.filter(Boolean).length ? div(tribe.tags.filter(Boolean).map(tag =>
-      a({ href: `/search?query=%23${encodeURIComponent(tag)}`, class: 'tag-link', style: 'margin-right:0.8em;margin-bottom:0.5em;' }, `#${tag}`)
-    )) : null,  
-    p(`${i18n.tribeCreatedAt}: ${new Date(tribe.createdAt).toLocaleString()}`),
-    p(a({ class: 'user-link', href: `/author/${encodeURIComponent(tribe.author)}` }, tribe.author)),
-    div({ class: 'tribe-feed-form' }, tribe.members.includes(config.keys.id)
-      ? form({ method: 'POST', action: `/tribe/${encodeURIComponent(tribe.id)}/message` },
-          textarea({ name: 'message', rows: 4, cols: 50, maxlength: 280, placeholder: i18n.tribeFeedMessagePlaceholder }),
-          br,
-          button({ type: 'submit' }, i18n.tribeFeedSend)
-        )
-      : null
+    div({ class: 'tribe-side' },
+      h2(tribe.title),
+      img({ src: imageSrc, alt: tribe.title }),
+      h2(`${i18n.tribeMembersCount}: ${tribe.members.length}`),
+      div({ style: 'display:flex; gap:.6em; flex-wrap:wrap;' },
+        tribe.location ? p({ style: 'color:#9aa3b2;' }, `${i18n.tribeLocationLabel.toUpperCase()}: `, ...renderUrl(tribe.location)) : null,
+        p({ style: 'color:#9aa3b2;' }, `${i18n.tribeIsAnonymousLabel}: ${tribe.isAnonymous ? i18n.tribePrivate : i18n.tribePublic}`),
+        p({ style: 'color:#9aa3b2;' }, `${i18n.tribeModeLabel}: ${tribe.inviteMode.toUpperCase()}`),
+        p({ style: 'color:#9aa3b2;' }, `${i18n.tribeLARPLabel}: ${tribe.isLARP ? i18n.tribeYes : i18n.tribeNo}`)
       ),
-    div({ class: 'tribe-feed-full' }, await renderFeedTribeView(tribe, query, query.filter)),
+      tribe.description ? p(...renderUrl(tribe.description)) : null,
+      div({ class: 'tribe-meta' },
+        tribe.tags && tribe.tags.filter(Boolean).length ? div(tribe.tags.filter(Boolean).map(tag =>
+          a({ href: `/search?query=%23${encodeURIComponent(tag)}`, class: 'tag-link' }, `#${tag}`)
+        )) : null,
+        p(`${i18n.tribeCreatedAt}: ${new Date(tribe.createdAt).toLocaleString()}`),
+        p(a({ class: 'user-link', href: `/author/${encodeURIComponent(tribe.author)}` }, tribe.author)),
+      ),
+      div({ class: 'tribe-meta' },
+        form({ method: 'POST', action: '/tribes/generate-invite' },
+          input({ type: 'hidden', name: 'tribeId', value: tribe.id }),
+          button({ type: 'submit' }, i18n.tribeGenerateInvite)
+        ),
+        form({ method: 'POST', action: `/tribes/leave/${encodeURIComponent(tribe.id)}` },
+          button({ type: 'submit' }, i18n.tribeLeaveButton)
+        )
+      ),
+    ),
+    div({ class: 'tribe-main' },
+      div({ class: 'tribe-feed-form' }, 
+       tribe.members.includes(config.keys.id)
+       ? form( { class: 'tribe-feed-compose', method: 'POST', action: `/tribe/${encodeURIComponent(tribe.id)}/message` },
+         textarea({ name: 'message', rows: 4, maxlength: 280, placeholder: i18n.tribeFeedMessagePlaceholder }),
+         button({ type: 'submit', class: 'tribe-feed-send' }, i18n.tribeFeedSend)
+       )
+       : null
+      ),
+      await renderFeedTribeView(tribe, query, query.filter),
+    )
   );
+
   return template(
     pageTitle,
     tribeDetails
   );
 };
+

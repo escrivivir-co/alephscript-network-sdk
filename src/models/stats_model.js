@@ -36,7 +36,9 @@ module.exports = ({ cooler }) => {
   const types = [
     'bookmark','event','task','votes','report','feed','project',
     'image','audio','video','document','transfer','post','tribe',
-    'market','forum','job','aiExchange'
+    'market','forum','job','aiExchange',
+    'parliamentCandidature','parliamentTerm','parliamentProposal','parliamentRevocation','parliamentLaw',
+    'courtsCase','courtsEvidence','courtsAnswer','courtsVerdict','courtsSettlement','courtsSettlementProposal','courtsSettlementAccepted','courtsNomination','courtsNominationVote'
   ];
 
   const getFolderSize = (folderPath) => {
@@ -91,6 +93,26 @@ module.exports = ({ cooler }) => {
     return out;
   };
 
+  const norm = s => String(s || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+  const bestContentTs = (c, fallbackTs = 0) =>
+    Number(c?.updatedAt ? Date.parse(c.updatedAt) : 0) ||
+    Number(c?.createdAt ? Date.parse(c.createdAt) : 0) ||
+    Number(c?.timestamp || 0) ||
+    Number(fallbackTs || 0);
+  const dedupeTribesNodes = (nodes = []) => {
+    const pick = new Map();
+    for (const n of nodes) {
+      const c = n?.content || {};
+      const title = c.title || c.name || '';
+      const author = n?.author || '';
+      const key = `${norm(title)}::${author}`;
+      const ts = bestContentTs(c, n?.ts || 0);
+      const prev = pick.get(key);
+      if (!prev || ts > prev._ts) pick.set(key, { ...n, _ts: ts });
+    }
+    return Array.from(pick.values());
+  };
+
   const getStats = async (filter = 'ALL') => {
     const ssbClient = await openSsb();
     const userId = ssbClient.id;
@@ -121,10 +143,10 @@ module.exports = ({ cooler }) => {
     for (const m of scopedMsgs) {
       const k = m.key;
       const c = m.value.content;
-      const t = c.type;
-      if (!types.includes(t)) continue;
-      byType[t].set(k, { key: k, ts: m.value.timestamp, content: c, author: m.value.author });
-      if (c.replaces) parentOf[t].set(k, c.replaces);
+      theType = c.type;
+      if (!types.includes(theType)) continue;
+      byType[theType].set(k, { key: k, ts: m.value.timestamp, content: c, author: m.value.author });
+      if (c.replaces) parentOf[theType].set(k, c.replaces);
     }
 
     const findRoot = (t, id) => {
@@ -151,12 +173,40 @@ module.exports = ({ cooler }) => {
       }
     }
 
+    const tribeTipNodes = Array.from(tipOf['tribe'].values());
+    const tribeDedupNodes = dedupeTribesNodes(tribeTipNodes);
+    const tribeDedupContents = tribeDedupNodes.map(n => n.content);
+
+    const tribePublic = tribeDedupContents.filter(c => c.isAnonymous === false);
+    const tribePrivate = tribeDedupContents.filter(c => c.isAnonymous !== false);
+    const tribePublicNames = tribePublic.map(c => c.name || c.title || c.id).filter(Boolean);
+    const tribePublicCount = tribePublicNames.length;
+    const tribePrivateCount = tribePrivate.length;
+
+    const allTribesPublic = tribeDedupNodes
+      .filter(n => n.content?.isAnonymous === false)
+      .map(n => ({ id: n.key, name: n.content.name || n.content.title || n.key }));
+
+    const allTribes = allTribesPublic.map(t => t.name);
+
+    const memberTribesDetailed = tribeDedupNodes
+      .filter(n => Array.isArray(n.content?.members) && n.content.members.includes(userId))
+      .map(n => ({ id: n.key, name: n.content.name || n.content.title || n.key }));
+
+    const myPrivateTribesDetailed = tribeDedupNodes
+      .filter(n => n.content?.isAnonymous !== false && Array.isArray(n.content?.members) && n.content.members.includes(userId))
+      .map(n => ({ id: n.key, name: n.content.name || n.content.title || n.key }));
+
     const content = {};
     const opinions = {};
     for (const t of types) {
-      if (t === 'karmaScore') continue;
-      let vals = Array.from(tipOf[t].values()).map(v => v.content);
-      if (t === 'forum') vals = vals.filter(c => !(c.root && tombTargets.has(c.root)));
+      let vals;
+      if (t === 'tribe') {
+        vals = tribeDedupContents;
+      } else {
+        vals = Array.from(tipOf[t].values()).map(v => v.content);
+        if (t === 'forum') vals = vals.filter(c => !(c.root && tombTargets.has(c.root)));
+      }
       content[t] = vals.length || 0;
       opinions[t] = vals.filter(e => Array.isArray(e.opinions_inhabitants) && e.opinions_inhabitants.length > 0).length || 0;
     }
@@ -178,11 +228,6 @@ module.exports = ({ cooler }) => {
       const sumKarma = Array.from(latestByAuthor.values()).reduce((s, x) => s + x.k, 0);
       content['karmaScore'] = sumKarma;
     }
-
-    const tribeVals = Array.from(tipOf['tribe'].values()).map(v => v.content);
-    const memberTribes = tribeVals
-      .filter(c => Array.isArray(c.members) && c.members.includes(userId))
-      .map(c => c.name || c.title || c.id);
 
     const inhabitants = new Set(allMsgs.map(m => m.value.author)).size;
 
@@ -277,14 +322,21 @@ module.exports = ({ cooler }) => {
       totalAddresses: Object.keys(addrMap).length
     };
     const pubsCount = listPubsFromEbt().length;
-    
+
     const stats = {
       id: userId,
       createdAt,
       inhabitants,
       content,
       opinions,
-      memberTribes,
+      memberTribes: memberTribesDetailed.map(t => t.name),
+      memberTribesDetailed,
+      myPrivateTribesDetailed,
+      allTribes,
+      allTribesPublic,
+      tribePublicNames,
+      tribePublicCount,
+      tribePrivateCount,
       userTombstoneCount: scopedMsgs.filter(m => m.value.content.type === 'tombstone').length,
       networkTombstoneCount: allMsgs.filter(m => m.value.content.type === 'tombstone').length,
       folderSize: formatSize(folderSize),

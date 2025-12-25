@@ -21,7 +21,7 @@ const getUserId = async () => {
   return userId;
 };
 
-const { a, article, br, body, button, details, div, em, footer, form, h1, h2, h3, head, header, hr, html, img, input, label, li, link, main, meta, nav, option, p, pre, section, select, span, summary, textarea, title, tr, ul, strong } = require("../server/node_modules/hyperaxe");
+const { a, article, br, body, button, details, div, em, footer, form, h1, h2, h3, head, header, hr, html, img, input, label, li, link, main, meta, nav, option, p, pre, section, select, span, summary, textarea, title, tr, ul, strong, video: videoHyperaxe, audio: audioHyperaxe } = require("../server/node_modules/hyperaxe");
 
 const lodash = require("../server/node_modules/lodash");
 const markdown = require("./markdown");
@@ -56,10 +56,62 @@ const nbsp = "\xa0";
 const { getConfig } = require('../configs/config-manager.js');
 
 // menu INIT
-const navLink = ({ href, emoji, text, current }) =>
+const readPkg = () => {
+  const file = path.resolve(__dirname, "..", "server", "package.json");
+  try {
+    const txt = fs.readFileSync(file, "utf8");
+    const parsed = JSON.parse(txt || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+};
+
+const renderFooter = () => {
+  const pkg = readPkg();
+  const year = moment().format("YYYY");
+  const pkgName = pkg?.name || "@krakenslab/oasis";
+  const pkgVersion = pkg?.version || "?";
+
+  return div(
+    { class: "oasis-footer" },
+    div(
+      { class: "oasis-footer-center" },
+      a(
+        { href: "/", class: "oasis-footer-logo-link" },
+        img({
+          class: "oasis-footer-logo",
+          src: "/assets/images/snh-oasis.jpg",
+          alt: "Oasis"
+        })
+      ),
+      a(
+        { href: "https://code.03c8.net/krakenslab/oasis", target: "_blank", rel: "noreferrer noopener", class: "oasis-footer-license-link" },
+      span(pkgName),
+      ),
+      span("["),
+         span({ class: "oasis-footer-version" }, pkgVersion),
+      span("]"),
+      span({ class: "oasis-footer-sep" }, " - "),
+      a(
+        { href: "https://www.gnu.org/licenses/gpl-3.0.html", target: "_blank", rel: "noreferrer noopener", class: "oasis-footer-license-link" },
+        i18n.footerLicense
+      ),
+      span({ class: "oasis-footer-sep" }, " - "),
+      span({ class: "oasis-footer-year" }, year)
+    )
+  );
+};
+
+const navLink = ({ href, emoji, text, current, class: extraClass }) =>
   li(
     a(
-      { href, class: current ? "current" : "" },
+      {
+        href,
+        class: [current ? "current" : "", extraClass]
+          .filter(Boolean)
+          .join(" ")
+      },
       span({ class: "emoji" }, emoji),
       nbsp,
       text
@@ -80,312 +132,514 @@ const customCSS = (filename) => {
   }
 };
 
+const navGroup = ({ id, emoji, title, defaultOpen = false }, ...items) =>
+  li(
+    { class: "oasis-nav-group" },
+    input({
+      type: "checkbox",
+      id: `oasis-nav-group-${id}`,
+      class: "oasis-nav-toggle",
+      ...(defaultOpen ? { checked: true } : {})
+    }),
+    label(
+      { for: `oasis-nav-group-${id}`, class: "oasis-nav-header" },
+      span({ class: "emoji" }, emoji),
+      nbsp,
+      title,
+      span({ class: "oasis-nav-arrow" }, "▾")
+    ),
+    ul({ class: "oasis-nav-list" }, ...items)
+  );
+
 const renderPopularLink = () => {
-  const popularMod = getConfig().modules.popularMod === 'on';
-  if (popularMod) {
-    return [
-      navLink({ href: "/public/popular/day", emoji: "⌘", text: i18n.popular, class: "popular-link enabled" }),
-      hr,
-    ];
-  }
-  return ''; 
+  const popularMod = getConfig().modules.popularMod === "on";
+  return popularMod
+    ? navLink({
+        href: "/public/popular/day",
+        emoji: "⌘",
+        text: i18n.popular,
+        class: "popular-link enabled"
+      })
+    : "";
 };
 
 const renderTopicsLink = () => {
-  const topicsMod = getConfig().modules.topicsMod === 'on';
-  return topicsMod 
-    ? navLink({ href: "/public/latest/topics", emoji: "ϟ", text: i18n.topics, class: "topics-link enabled" }) 
-    : ''; 
+  const topicsMod = getConfig().modules.topicsMod === "on";
+  return topicsMod
+    ? navLink({
+        href: "/public/latest/topics",
+        emoji: "ϟ",
+        text: i18n.topics,
+        class: "topics-link enabled"
+      })
+    : "";
 };
 
 const renderSummariesLink = () => {
-  const summariesMod = getConfig().modules.summariesMod === 'on';
+  const summariesMod = getConfig().modules.summariesMod === "on";
   if (summariesMod) {
     return [
-     navLink({ href: "/public/latest/summaries", emoji: "※", text: i18n.summaries, class: "summaries-link enabled" }),
+      navLink({
+        href: "/public/latest/summaries",
+        emoji: "※",
+        text: i18n.summaries,
+        class: "summaries-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderLatestLink = () => {
-  const latestMod = getConfig().modules.latestMod === 'on';
-  return latestMod 
-    ? navLink({ href: "/public/latest", emoji: "☄", text: i18n.latest, class: "latest-link enabled" }) 
-    : ''; 
+  const latestMod = getConfig().modules.latestMod === "on";
+  return latestMod
+    ? navLink({
+        href: "/public/latest",
+        emoji: "☄",
+        text: i18n.latest,
+        class: "latest-link enabled"
+      })
+    : "";
 };
 
 const renderThreadsLink = () => {
-  const threadsMod = getConfig().modules.threadsMod === 'on';
+  const threadsMod = getConfig().modules.threadsMod === "on";
   if (threadsMod) {
     return [
-      navLink({ href: "/public/latest/threads", emoji: "♺", text: i18n.threads, class: "threads-link enabled" }),
+      navLink({
+        href: "/public/latest/threads",
+        emoji: "♺",
+        text: i18n.threads,
+        class: "threads-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderInvitesLink = () => {
-  const invitesMod = getConfig().modules.invitesMod === 'on';
-  return invitesMod 
-    ? navLink({ href: "/invites", emoji: "ꔹ", text: i18n.invites, class: "invites-link enabled" }) 
-    : ''; 
+  const invitesMod = getConfig().modules.invitesMod === "on";
+  return invitesMod
+    ? navLink({
+        href: "/invites",
+        emoji: "ꔹ",
+        text: i18n.invites,
+        class: "invites-link enabled"
+      })
+    : "";
 };
 
 const renderWalletLink = () => {
-  const walletMod = getConfig().modules.walletMod === 'on';
+  const walletMod = getConfig().modules.walletMod === "on";
   if (walletMod) {
     return [
-      navLink({ href: "/wallet", emoji: "❄", text: i18n.wallet, class: "wallet-link enabled" }),
+      navLink({
+        href: "/wallet",
+        emoji: "❄",
+        text: i18n.wallet,
+        class: "wallet-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderLegacyLink = () => {
-  const legacyMod = getConfig().modules.legacyMod === 'on';
+  const legacyMod = getConfig().modules.legacyMod === "on";
   if (legacyMod) {
     return [
-      navLink({ href: "/legacy", emoji: "ꖤ", text: i18n.legacy, class: "legacy-link enabled" }),
+      navLink({
+        href: "/legacy",
+        emoji: "ꖤ",
+        text: i18n.legacy,
+        class: "legacy-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderCipherLink = () => {
-  const cipherMod = getConfig().modules.cipherMod === 'on';
+  const cipherMod = getConfig().modules.cipherMod === "on";
   if (cipherMod) {
     return [
-      navLink({ href: "/cipher", emoji: "ꗄ", text: i18n.cipher, class: "cipher-link enabled" }),
+      navLink({
+        href: "/cipher",
+        emoji: "ꗄ",
+        text: i18n.cipher,
+        class: "cipher-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderBookmarksLink = () => {
-  const bookmarksMod = getConfig().modules.bookmarksMod === 'on';
-  if (bookmarksMod) {
-    return [
-      hr(),
-      navLink({ href: "/bookmarks", emoji: "ꔪ", text: i18n.bookmarksLabel, class: "bookmark-link enabled" }),
-    ];
-  }
-  return ''; 
+  const bookmarksMod = getConfig().modules.bookmarksMod === "on";
+  return bookmarksMod
+    ? navLink({
+        href: "/bookmarks",
+        emoji: "ꔪ",
+        text: i18n.bookmarksLabel,
+        class: "bookmark-link enabled"
+      })
+    : "";
 };
 
 const renderImagesLink = () => {
-  const imagesMod = getConfig().modules.imagesMod === 'on';
+  const imagesMod = getConfig().modules.imagesMod === "on";
   if (imagesMod) {
     return [
-      navLink({ href: "/images", emoji: "ꕥ", text: i18n.imagesLabel, class: "images-link enabled" }),
+      navLink({
+        href: "/images",
+        emoji: "ꕥ",
+        text: i18n.imagesLabel,
+        class: "images-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderVideosLink = () => {
-  const videosMod = getConfig().modules.videosMod === 'on';
+  const videosMod = getConfig().modules.videosMod === "on";
   if (videosMod) {
     return [
-      navLink({ href: "/videos", emoji: "ꗟ", text: i18n.videosLabel, class: "videos-link enabled" }),
+      navLink({
+        href: "/videos",
+        emoji: "ꗟ",
+        text: i18n.videosLabel,
+        class: "videos-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderAudiosLink = () => {
-  const audiosMod = getConfig().modules.audiosMod === 'on';
+  const audiosMod = getConfig().modules.audiosMod === "on";
   if (audiosMod) {
     return [
-      navLink({ href: "/audios", emoji: "ꔿ", text: i18n.audiosLabel, class: "audios-link enabled" }),
+      navLink({
+        href: "/audios",
+        emoji: "ꔿ",
+        text: i18n.audiosLabel,
+        class: "audios-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderDocsLink = () => {
-  const docsMod = getConfig().modules.docsMod === 'on';
+  const docsMod = getConfig().modules.docsMod === "on";
   if (docsMod) {
     return [
-      navLink({ href: "/documents", emoji: "ꕨ", text: i18n.docsLabel, class: "docs-link enabled" }),
+      navLink({
+        href: "/documents",
+        emoji: "ꕨ",
+        text: i18n.docsLabel,
+        class: "docs-link enabled"
+      })
     ];
   }
-  return ''; 
+  return "";
 };
 
 const renderTagsLink = () => {
-  const tagsMod = getConfig().modules.tagsMod === 'on';
-  return tagsMod 
+  const tagsMod = getConfig().modules.tagsMod === "on";
+  return tagsMod
     ? [
-        navLink({ href: "/tags", emoji: "ꖶ", text: i18n.tagsLabel, class: "tags-link enabled" }) 
+        navLink({
+          href: "/tags",
+          emoji: "ꖶ",
+          text: i18n.tagsLabel,
+          class: "tags-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderMultiverseLink = () => {
-  const multiverseMod = getConfig().modules.multiverseMod === 'on';
-  return multiverseMod 
-    ? [
-        hr,
-        navLink({ href: "/public/latest/extended", emoji: "∞", text: i18n.multiverse, class: "multiverse-link enabled" }) 
-      ]
-    : '';
+  const multiverseMod = getConfig().modules.multiverseMod === "on";
+  return multiverseMod
+    ? navLink({
+        href: "/public/latest/extended",
+        emoji: "∞",
+        text: i18n.multiverse,
+        class: "multiverse-link enabled"
+      })
+    : "";
 };
 
 const renderMarketLink = () => {
-  const marketMod = getConfig().modules.marketMod === 'on';
-  return marketMod 
+  const marketMod = getConfig().modules.marketMod === "on";
+  return marketMod
     ? [
-      navLink({ href: "/market", emoji: "ꕻ", text: i18n.marketTitle }),
+        navLink({
+          href: "/market",
+          emoji: "ꕻ",
+          text: i18n.marketTitle
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderJobsLink = () => {
-  const jobsMod = getConfig().modules.jobsMod === 'on';
-  return jobsMod 
+  const jobsMod = getConfig().modules.jobsMod === "on";
+  return jobsMod
     ? [
-      navLink({ href: "/jobs", emoji: "ꗒ", text: i18n.jobsTitle }),
+        navLink({
+          href: "/jobs",
+          emoji: "ꗒ",
+          text: i18n.jobsTitle
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderProjectsLink = () => {
-  const projectsMod = getConfig().modules.projectsMod === 'on';
-  return projectsMod 
+  const projectsMod = getConfig().modules.projectsMod === "on";
+  return projectsMod
     ? [
-      navLink({ href: "/projects", emoji: "ꕧ", text: i18n.projectsTitle }),
+        navLink({
+          href: "/projects",
+          emoji: "ꕧ",
+          text: i18n.projectsTitle
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderBankingLink = () => {
-  const bankingMod = getConfig().modules.bankingMod === 'on';
-  return bankingMod 
-    ? [
-      hr(),
-      navLink({ href: "/banking", emoji: "ꗴ", text: i18n.bankingTitle }),
-      ]
-    : '';
+  const bankingMod = getConfig().modules.bankingMod === "on";
+  return bankingMod
+    ? navLink({
+        href: "/banking",
+        emoji: "ꗴ",
+        text: i18n.bankingTitle
+      })
+    : "";
 };
 
 const renderTribesLink = () => {
-  const tribesMod = getConfig().modules.tribesMod === 'on';
-  return tribesMod 
+  const tribesMod = getConfig().modules.tribesMod === "on";
+  return tribesMod
     ? [
-        navLink({ href: "/tribes", emoji: "ꖥ", text: i18n.tribesTitle, class: "tribes-link enabled" }),
-        hr(),
+        navLink({
+          href: "/tribes",
+          emoji: "ꖥ",
+          text: i18n.tribesTitle,
+          class: "tribes-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
-const renderGovernanceLink = () => {
-  const governanceMod = getConfig().modules.governanceMod === 'on';
-  return governanceMod 
+const renderParliamentLink = () => {
+  const parliamentMod = getConfig().modules.parliamentMod === "on";
+  return parliamentMod
     ? [
-       navLink({ href: "/votes", emoji: "ꔰ", text: i18n.governanceTitle, class: "votes-link enabled" }),
+        navLink({
+          href: "/parliament",
+          emoji: "ꗞ",
+          text: i18n.parliamentTitle,
+          class: "parliament-link enabled"
+        })
       ]
-    : '';
+    : "";
+};
+
+const renderCourtsLink = () => {
+  const courtsMod = getConfig().modules.courtsMod === "on";
+  return courtsMod
+    ? navLink({
+        href: "/courts",
+        emoji: "ꖻ",
+        text: i18n.courtsTitle,
+        class: "courts-link enabled"
+      })
+    : "";
+};
+
+const renderVotationsLink = () => {
+  const votesMod = getConfig().modules.votesMod === "on";
+  return votesMod
+    ? [
+        navLink({
+          href: "/votes",
+          emoji: "ꔰ",
+          text: i18n.votationsTitle,
+          class: "votations-link enabled"
+        })
+      ]
+    : "";
 };
 
 const renderTrendingLink = () => {
-  const trendingMod = getConfig().modules.trendingMod === 'on';
-  return trendingMod 
+  const trendingMod = getConfig().modules.trendingMod === "on";
+  return trendingMod
     ? [
-        navLink({ href: "/trending", emoji: "ꗝ", text: i18n.trendingLabel, class: "trending-link enabled" }),
+        navLink({
+          href: "/trending",
+          emoji: "ꗝ",
+          text: i18n.trendingLabel,
+          class: "trending-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderReportsLink = () => {
-  const reportsMod = getConfig().modules.reportsMod === 'on';
-  return reportsMod 
+  const reportsMod = getConfig().modules.reportsMod === "on";
+  return reportsMod
     ? [
-       navLink({ href: "/reports", emoji: "ꕥ", text: i18n.reportsTitle, class: "reports-link enabled" }),
+        navLink({
+          href: "/reports",
+          emoji: "ꕥ",
+          text: i18n.reportsTitle,
+          class: "reports-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderOpinionsLink = () => {
-  const opinionsMod = getConfig().modules.opinionsMod === 'on';
-  return opinionsMod 
+  const opinionsMod = getConfig().modules.opinionsMod === "on";
+  return opinionsMod
     ? [
-      navLink({ href: "/opinions", emoji: "ꔍ", text: i18n.opinionsTitle, class: "opinions-link enabled" }),
+        navLink({
+          href: "/opinions",
+          emoji: "ꔍ",
+          text: i18n.opinionsTitle,
+          class: "opinions-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderTransfersLink = () => {
-  const transfersMod = getConfig().modules.transfersMod === 'on';
-  return transfersMod 
+  const transfersMod = getConfig().modules.transfersMod === "on";
+  return transfersMod
     ? [
-      navLink({ href: "/transfers", emoji: "ꘉ", text: i18n.transfersTitle, class: "transfers-link enabled" }),
+        navLink({
+          href: "/transfers",
+          emoji: "ꘉ",
+          text: i18n.transfersTitle,
+          class: "transfers-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderFeedLink = () => {
-  const feedMod = getConfig().modules.feedMod === 'on';
-  return feedMod 
-    ? [
-      hr(),
-      navLink({ href: "/feed", emoji: "ꕿ", text: i18n.feedTitle, class: "feed-link enabled" }),
-      ]
-    : '';
+  const feedMod = getConfig().modules.feedMod === "on";
+  return feedMod
+    ? navLink({
+        href: "/feed",
+        emoji: "ꕿ",
+        text: i18n.feedTitle,
+        class: "feed-link enabled"
+      })
+    : "";
 };
 
 const renderPixeliaLink = () => {
-  const pixeliaMod = getConfig().modules.pixeliaMod === 'on';
-  return pixeliaMod 
+  const pixeliaMod = getConfig().modules.pixeliaMod === "on";
+  return pixeliaMod
     ? [
-     navLink({ href: "/pixelia", emoji: "ꔘ", text: i18n.pixeliaTitle, class: "pixelia-link enabled" }),
+        navLink({
+          href: "/pixelia",
+          emoji: "ꔘ",
+          text: i18n.pixeliaTitle,
+          class: "pixelia-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderForumLink = () => {
-  const forumMod = getConfig().modules.forumMod === 'on';
-  return forumMod 
+  const forumMod = getConfig().modules.forumMod === "on";
+  return forumMod
     ? [
-     navLink({ href: "/forum", emoji: "ꕒ", text: i18n.forumTitle, class: "forum-link enabled" }),
+        navLink({
+          href: "/forum",
+          emoji: "ꕒ",
+          text: i18n.forumTitle,
+          class: "forum-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderAgendaLink = () => {
-  const agendaMod = getConfig().modules.agendaMod === 'on';
-  return agendaMod 
+  const agendaMod = getConfig().modules.agendaMod === "on";
+  return agendaMod
     ? [
-      navLink({ href: "/agenda", emoji: "ꗤ", text: i18n.agendaTitle, class: "agenda-link enabled" }),
+        navLink({
+          href: "/agenda",
+          emoji: "ꗤ",
+          text: i18n.agendaTitle,
+          class: "agenda-link enabled"
+        })
       ]
-    : '';
+    : "";
+};
+
+const renderFavoritesLink = () => {
+  const favoritesMod = getConfig().modules.favoritesMod === "on";
+  return favoritesMod
+    ? [
+        navLink({
+          href: "/favorites",
+          emoji: "ꘝ",
+          text: i18n.favoritesTitle,
+          class: "favorites-link enabled"
+        })
+      ]
+    : "";
 };
 
 const renderAILink = () => {
-  const aiMod = getConfig().modules.aiMod === 'on';
-  return aiMod 
+  const aiMod = getConfig().modules.aiMod === "on";
+  return aiMod
     ? [
-      navLink({ href: "/ai", emoji: "ꘜ", text: i18n.ai, class: "ai-link enabled" }),
+        navLink({
+          href: "/ai",
+          emoji: "ꘜ",
+          text: i18n.ai,
+          class: "ai-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderEventsLink = () => {
-  const eventsMod = getConfig().modules.eventsMod === 'on';
-  return eventsMod 
+  const eventsMod = getConfig().modules.eventsMod === "on";
+  return eventsMod
     ? [
-        navLink({ href: "/events", emoji: "ꕆ", text: i18n.eventsLabel, class: "events-link enabled" }),
+        navLink({
+          href: "/events",
+          emoji: "ꕆ",
+          text: i18n.eventsLabel,
+          class: "events-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const renderTasksLink = () => {
-  const tasksMod = getConfig().modules.tasksMod === 'on';
-  return tasksMod 
+  const tasksMod = getConfig().modules.tasksMod === "on";
+  return tasksMod
     ? [
-        navLink({ href: "/tasks", emoji: "ꖧ", text: i18n.tasksTitle, class: "tasks-link enabled" }),     
+        navLink({
+          href: "/tasks",
+          emoji: "ꖧ",
+          text: i18n.tasksTitle,
+          class: "tasks-link enabled"
+        })
       ]
-    : '';
+    : "";
 };
 
 const template = (titlePrefix, ...elements) => {
@@ -404,41 +658,51 @@ const template = (titlePrefix, ...elements) => {
       link({ rel: "icon", href: "/assets/images/favicon.svg" }),
       meta({ charset: "utf-8" }),
       meta({ name: "description", content: i18n.oasisDescription }),
-      meta({ name: "viewport", content: toAttributes({ width: "device-width", "initial-scale": 1 }) })
+      meta({
+        name: "viewport",
+        content: toAttributes({
+          width: "device-width",
+          "initial-scale": 1
+        })
+      })
     ),
     body(
       div(
         { class: "header" },
         div(
           { class: "top-bar-left" },
-          a({ class: "logo-icon", href: "/" },
-            img({ class: "logo-icon", src: "/assets/images/snh-oasis.jpg", alt: "Oasis Logo" })
+          a(
+            { class: "logo-icon", href: "/" },
+            img({
+              class: "logo-icon",
+              src: "/assets/images/snh-oasis.jpg",
+              alt: "Oasis Logo"
+            })
           ),
           nav(
             ul(
-              navLink({ href: "/profile", emoji: "⚉", text: i18n.profile }),
-              navLink({ href: "/cv", emoji: "ꕛ", text: i18n.cvTitle }),
-              renderLegacyLink(),            
-              renderWalletLink(),
-              navLink({ href: "/peers", emoji: "⧖", text: i18n.peers }),
-              renderInvitesLink(),
-              navLink({ href: "/modules", emoji: "ꗣ", text: i18n.modules }),
-              navLink({ href: "/settings", emoji: "⚙", text: i18n.settings })
+              navLink({
+                href: "/inbox",
+                emoji: "☂",
+                text: i18n.inbox
+              }),
+              navLink({
+                href: "/pm",
+                emoji: "ꕕ",
+                text: i18n.privateMessage
+              }),
+              navLink({ href: "/publish", emoji: "❂", text: i18n.publish })
             )
-          ),
+          )
         ),
         div(
           { class: "top-bar-right" },
           nav(
             ul(
-             renderCipherLink(),
-             navLink({ href: "/pm", emoji: "ꕕ", text: i18n.privateMessage }),
-             navLink({ href: "/publish", emoji: "❂", text: i18n.publish }),
-             renderAILink(),
-             renderTagsLink(),
-             navLink({ href: "/search", emoji: "ꔅ", text: i18n.searchTitle })
-             )
-          ),
+              renderTagsLink(),
+              navLink({ href: "/search", emoji: "ꔅ", text: i18n.searchTitle })
+            )
+          )
         )
       ),
       div(
@@ -447,24 +711,100 @@ const template = (titlePrefix, ...elements) => {
           { class: "sidebar-left" },
           nav(
             ul(
-              navLink({ href: "/mentions", emoji: "✺", text: i18n.mentions }),
-              navLink({ href: "/inbox", emoji: "☂", text: i18n.inbox }),
-              renderAgendaLink(),
-              navLink({ href: "/stats", emoji: "ꕷ", text: i18n.statistics }),
-              navLink({ href: "/blockexplorer", emoji: "ꖸ", text: i18n.blockchain }),
-              hr,
-              renderLatestLink(),
-              renderThreadsLink(),
-              renderTopicsLink(),
-              renderSummariesLink(),
-              renderPopularLink(),
-              navLink({ href: "/inhabitants", emoji: "ꖘ", text: i18n.inhabitantsLabel }),
-              renderTribesLink(),
-              renderGovernanceLink(),
-              renderEventsLink(),
-              renderTasksLink(),
-              renderReportsLink(),
-              renderMultiverseLink()
+              navGroup(
+                {
+                  id: "personal",
+                  emoji: "⚉",
+                  title: i18n.menuPersonal
+                },
+                navLink({
+                  href: "/profile",
+                  emoji: "⚉",
+                  text: i18n.profile
+                }),
+                navLink({
+                  href: "/cv",
+                  emoji: "ꕛ",
+                  text: i18n.cvTitle
+                }),
+                renderAgendaLink(),
+                renderFavoritesLink(),
+                renderWalletLink(),
+                navLink({
+                  href: "/modules",
+                  emoji: "ꗣ",
+                  text: i18n.modules
+                }),
+                navLink({
+                  href: "/settings",
+                  emoji: "⚙",
+                  text: i18n.settings
+                })
+              ),
+              navGroup(
+                {
+                  id: "content",
+                  emoji: "✦",
+                  title: i18n.menuContent
+                },
+                navLink({
+                  href: "/mentions",
+                  emoji: "✺",
+                  text: i18n.mentions
+                }),
+                renderLatestLink(),
+                renderThreadsLink(),
+                renderTopicsLink(),
+                renderSummariesLink(),
+                renderPopularLink(),
+                renderMultiverseLink()
+              ),
+              navGroup(
+                {
+                  id: "governance",
+                  emoji: "⚖",
+                  title: i18n.menuGovernance
+                },
+                navLink({
+                  href: "/inhabitants",
+                  emoji: "ꖘ",
+                  text: i18n.inhabitantsLabel
+                }),
+                renderTribesLink(),
+                renderParliamentLink(),
+                renderCourtsLink()
+              ),
+              navGroup(
+                {
+                  id: "office",
+                  emoji: "⌂",
+                  title: i18n.menuOffice
+                },
+                renderVotationsLink(),
+                renderEventsLink(),
+                renderTasksLink(),
+                renderReportsLink()
+              ),
+              navGroup(
+                {
+                  id: "tools",
+                  emoji: "⚒",
+                  title: i18n.menuTools
+                },
+                renderAILink(),
+                navLink({
+                  href: "/stats",
+                  emoji: "ꕷ",
+                  text: i18n.statistics
+                }),
+                navLink({
+                  href: "/blockexplorer",
+                  emoji: "ꖸ",
+                  text: i18n.blockchain
+                }),
+                renderCipherLink(),
+                renderLegacyLink()
+              )
             )
           )
         ),
@@ -473,26 +813,65 @@ const template = (titlePrefix, ...elements) => {
           { class: "sidebar-right" },
           nav(
             ul(
-              navLink({ href: "/activity", emoji: "ꔙ", text: i18n.activityTitle }),
-              renderTrendingLink(),
-              renderOpinionsLink(),
-              renderForumLink(),
-              renderFeedLink(),
-              renderPixeliaLink(),
-              renderBankingLink(),
-              renderMarketLink(),
-              renderProjectsLink(),
-              renderJobsLink(),
-              renderTransfersLink(),
-              renderBookmarksLink(),
-              renderImagesLink(),
-              renderVideosLink(),
-              renderAudiosLink(),
-              renderDocsLink(),
+              navGroup(
+                {
+                  id: "network",
+                  emoji: "☍",
+                  title: i18n.menuNetwork
+                },
+                navLink({
+                  href: "/activity",
+                  emoji: "ꔙ",
+                  text: i18n.activityTitle
+                }),
+                renderTrendingLink(),
+                renderOpinionsLink(),
+                renderForumLink(),
+                renderInvitesLink(),
+                navLink({
+                  href: "/peers",
+                  emoji: "⧖",
+                  text: i18n.peers
+                })
+              ),
+              navGroup(
+                {
+                  id: "creative",
+                  emoji: "✎",
+                  title: i18n.menuCreative
+                },
+                renderFeedLink(),
+                renderPixeliaLink()
+              ),
+              navGroup(
+                {
+                  id: "economy",
+                  emoji: "¤",
+                  title: i18n.menuEconomy
+                },
+                renderBankingLink(),
+                renderMarketLink(),
+                renderProjectsLink(),
+                renderJobsLink(),
+                renderTransfersLink()
+              ),
+              navGroup(
+                {
+                  id: "media",
+                  emoji: "▤",
+                  title: i18n.menuMedia
+                },
+                renderAudiosLink(),
+                renderBookmarksLink(),
+                renderDocsLink(),
+                renderImagesLink(),
+                renderVideosLink()
+              )
             )
           )
-        ),
-      )
+        )
+      ),
+    renderFooter()
     )
   );
   return doctypeString + nodes.outerHTML;
@@ -542,7 +921,7 @@ const thread = (messages) => {
         lodash.get(currentMsg, "value.meta.thread.ancestorOfTarget", false)
       );
       const isBlocked = Boolean(nextMsg.value.meta.blocking);
-      const nextAuthor = lodash.get(nextMsg, "value.meta.author.name");
+      const nextAuthor = lodash.get(nextMsg, "value.meta.author.name") || (typeof nextMsg?.value?.author === "string" ? (nextMsg.value.author.startsWith("@") ? nextMsg.value.author.slice(1) : nextMsg.value.author) : "Anonymous");
       const nextSnippet = postSnippet(
         lodash.has(nextMsg, "value.content.contentWarning")
           ? lodash.get(nextMsg, "value.content.contentWarning")
@@ -630,183 +1009,425 @@ const postAside = ({ key, value }) => {
 };
 
 const post = ({ msg, aside = false, preview = false }) => {
-  const encoded = {
-    key: encodeURIComponent(msg.key),
-    author: encodeURIComponent(msg.value?.author),
-    parent: encodeURIComponent(msg.value?.content?.root),
-  };
+    const encoded = {
+        key: encodeURIComponent(msg.key),
+        author: encodeURIComponent(msg.value?.author),
+        parent: encodeURIComponent(msg.value?.content?.root),
+    };
 
-  const url = {
-    author: `/author/${encoded.author}`,
-    likeForm: `/like/${encoded.key}`,
-    link: `/thread/${encoded.key}#${encoded.key}`,
-    parent: `/thread/${encoded.parent}#${encoded.parent}`,
-    avatar: msg.value?.meta?.author?.avatar?.url || '/assets/images/default-avatar.png',
-    json: `/json/${encoded.key}`,
-    subtopic: `/subtopic/${encoded.key}`,
-    comment: `/comment/${encoded.key}`,
-  };
+    const url = {
+        author: `/author/${encoded.author}`,
+        likeForm: `/like/${encoded.key}`,
+        link: `/thread/${encoded.key}#${encoded.key}`,
+        parent: `/thread/${encoded.parent}#${encoded.parent}`,
+        avatar: msg.value?.meta?.author?.avatar?.url || '/assets/images/default-avatar.png',
+        json: `/json/${encoded.key}`,
+        subtopic: `/subtopic/${encoded.key}`,
+        comment: `/comment/${encoded.key}`,
+    };
 
-  const isPrivate = Boolean(msg.value?.meta?.private); 
-  const isBlocked = Boolean(msg.value?.meta?.blocking);
-  const isRoot = msg.value?.content?.root == null;
-  const isFork = msg.value?.meta?.postType === "subtopic";
-  const hasContentWarning = typeof msg.value?.content?.contentWarning === "string";
-  const isThreadTarget = Boolean(lodash.get(msg, "value.meta.thread.target", false));
+    const isPrivate = Boolean(msg.value?.meta?.private);
+    const isBlocked = Boolean(msg.value?.meta?.blocking);
+    const isRoot = msg.value?.content?.root == null;
+    const isFork = msg.value?.meta?.postType === "subtopic";
+    const hasContentWarning = typeof msg.value?.content?.contentWarning === "string";
+    const isThreadTarget = Boolean(lodash.get(msg, "value.meta.thread.target", false));
 
-  const { name } = msg.value?.meta?.author || { name: "Anonymous" };
+    const authorIdForName = msg.value?.author; 
+    const name =
+      msg.value?.meta?.author?.name ||
+      (typeof authorIdForName === "string"
+        ? (authorIdForName.startsWith("@") ? authorIdForName.slice(1) : authorIdForName)
+        : "Anonymous");
 
-  const markdownContent = msg.value?.content?.text;
-  const emptyContent = "<p>undefined</p>\n";
-  const articleElement =
-    markdownContent === emptyContent
-      ? article(
-          { class: "content" },
-          pre({
-            innerHTML: highlightJs.highlight(
-              JSON.stringify(msg, null, 2),
-              { language: "json", ignoreIllegals: true }
-            ).value,
-          })
-        )
-      : article({ class: "content", innerHTML: markdownContent });
+    const content = msg.value?.content || {};
+    const contentType = String(content.type || "");
 
-  if (preview) {
-    return section(
-      { id: msg.key, class: "post-preview" },
-      hasContentWarning
-        ? details(summary(msg.value?.content?.contentWarning), articleElement)
-        : articleElement
-    );
-  }
+    const THREAD_ENTITY_TYPES = new Set([
+        'bookmark',
+        'image',
+        'audio',
+        'video',
+        'document',
+        'votes',
+        'event',
+        'task',
+        'report',
+        'market',
+        'project',
+        'job'
+    ]);
 
-  const ts_received = msg.value?.meta?.timestamp?.received;
+    const safeUpper = (s) => String(s || '').toUpperCase();
+    const safeStr = (v) => (v == null ? '' : String(v));
+    const isMsgId = (s) => typeof s === 'string' && (s.startsWith('%') || s.startsWith('&') || s.startsWith('@'));
+    const fmtDate = (v) => {
+        if (!v) return '';
+        const m = moment(v, moment.ISO_8601, true);
+        if (m.isValid()) return m.format('YYYY-MM-DD HH:mm:ss');
+        const n = typeof v === 'number' ? v : Date.parse(v);
+        if (!Number.isFinite(n)) return '';
+        return moment(n).format('YYYY-MM-DD HH:mm:ss');
+    };
 
-  if (!ts_received || !ts_received.iso8601 || !moment(ts_received.iso8601, moment.ISO_8601, true).isValid()) {
-    return null;
-  }
+    const renderField = (labelText, valueNode) => {
+        if (valueNode == null || valueNode === '') return null;
+        return div(
+            { class: 'card-field' },
+            span({ class: 'card-label' }, labelText),
+            span({ class: 'card-value' }, valueNode)
+        );
+    };
 
-  const validTimestamp = moment(ts_received.iso8601, moment.ISO_8601);
-  const timeAgo = validTimestamp.fromNow();
-  const timeAbsolute = validTimestamp.toISOString().split(".")[0].replace("T", " ");
+    const entityTitle = (c) => {
+        const t = String(c.type || '').toLowerCase();
+        if (t === 'votes') return safeStr(c.question || c.title);
+        if (t === 'bookmark') return safeStr(c.title || c.name || c.url);
+        if (t === 'market') return safeStr(c.title);
+        if (t === 'project') return safeStr(c.title);
+        if (t === 'job') return safeStr(c.title);
+        if (t === 'report') return safeStr(c.title);
+        if (t === 'task') return safeStr(c.title);
+        if (t === 'event') return safeStr(c.title);
+        if (t === 'document') return safeStr(c.title || c.name || c.url);
+        if (t === 'image' || t === 'audio' || t === 'video') return safeStr(c.title || c.name || c.url);
+        return safeStr(c.title || c.name || c.question || c.url);
+    };
 
-  const likeButton = msg.value?.meta?.voted
-    ? { value: 0, class: "liked" }
-    : { value: 1, class: null };
+    const renderEntityRoot = (c) => {
+        const t = String(c.type || '').toLowerCase();
+        const header = `[${safeUpper(t)}]`;
+        const titleText = entityTitle(c) || '(sin título)';
 
-  const likeCount = msg.value?.meta?.votes?.length || 0;
-  const maxLikedNameLength = 16;
-  const maxLikedNames = 16;
+        const nodes = [];
+        nodes.push(
+            div(
+                { class: 'card-field', style: 'margin-bottom:10px;' },
+                span({ class: 'card-label', style: 'font-weight:800;' }, header),
+                span({ class: 'card-value', style: 'margin-left:10px; font-weight:800;' }, titleText)
+            )
+        );
 
-  const likedByNames = msg.value?.meta?.votes
-    .slice(0, maxLikedNames)
-    .map((person) => person.name)
-    .map((name) => name.slice(0, maxLikedNameLength))
-    .join(", ");
+        if (t === 'votes') {
+            const status = safeStr(c.status);
+            const deadline = fmtDate(c.deadline);
+            const totalVotes = (typeof c.totalVotes !== 'undefined') ? safeStr(c.totalVotes) : '';
+            const tags = Array.isArray(c.tags) ? c.tags.filter(Boolean) : [];
 
-  const additionalLikesMessage =
-    likeCount > maxLikedNames ? `+${likeCount - maxLikedNames} more` : ``;
+            const f1 = renderField((i18n.status || 'Status') + ':', status ? safeUpper(status) : '');
+            const f2 = renderField((i18n.deadline || 'Deadline') + ':', deadline);
+            const f3 = renderField((i18n.voteTotalVotes || 'Total votes') + ':', totalVotes);
+            if (f1) nodes.push(f1);
+            if (f2) nodes.push(f2);
+            if (f3) nodes.push(f3);
 
-  const likedByMessage =
-    likeCount > 0 ? `${likedByNames} ${additionalLikesMessage}` : null;
+            if (tags.length) {
+                nodes.push(
+                    div(
+                        { class: 'card-tags', style: 'margin-top:10px;' },
+                        ...tags.map(tag =>
+                            a(
+                                { href: `/search?query=%23${encodeURIComponent(tag)}`, class: 'tag-link' },
+                                `#${tag}`
+                            )
+                        )
+                    )
+                );
+            }
+        } else if (t === 'report') {
+            const status = safeStr(c.status);
+            const severity = safeStr(c.severity);
+            const r1 = renderField((i18n.status || 'Status') + ':', status ? safeUpper(status) : '');
+            const r2 = renderField((i18n.severity || 'Severity') + ':', severity ? safeUpper(severity) : '');
+            if (r1) nodes.push(r1);
+            if (r2) nodes.push(r2);
+        } else if (t === 'task') {
+            const status = safeStr(c.status);
+            const priority = safeStr(c.priority);
+            const startTime = fmtDate(c.startTime);
+            const endTime = fmtDate(c.endTime);
 
-  const messageClasses = ["post"];
+            const r1 = renderField((i18n.status || 'Status') + ':', status ? safeUpper(status) : '');
+            const r2 = renderField((i18n.priority || 'Priority') + ':', priority ? safeUpper(priority) : '');
+            const r3 = renderField((i18n.taskStartTimeLabel || 'Start') + ':', startTime);
+            const r4 = renderField((i18n.taskEndTimeLabel || 'End') + ':', endTime);
 
-  const recps = [];
+            if (r1) nodes.push(r1);
+            if (r2) nodes.push(r2);
+            if (r3) nodes.push(r3);
+            if (r4) nodes.push(r4);
+        } else if (t === 'event') {
+            const dateStr = fmtDate(c.date);
+            const location = safeStr(c.location);
+            const price = (typeof c.price !== 'undefined') ? safeStr(c.price) : '';
 
-  const addRecps = (recpsInfo) => {
-    recpsInfo.forEach((recp) => {
-      recps.push(
-        a(
-          { href: `/author/${encodeURIComponent(recp.feedId)}` },
-          img({ class: "avatar", src: recp.avatarUrl, alt: "" })
-        )
-      );
-    });
-  };
+            const r1 = renderField((i18n.date || 'Date') + ':', dateStr);
+            const r2 = renderField((i18n.location || 'Location') + ':', location);
+            const r3 = renderField((i18n.price || 'Price') + ':', price ? `${price} ECO` : '');
 
-  if (isPrivate) {
-    messageClasses.push("private");
-    addRecps(msg.value?.meta?.recpsInfo || []);
-  }
+            if (r1) nodes.push(r1);
+            if (r2) nodes.push(r2);
+            if (r3) nodes.push(r3);
+        } else if (t === 'bookmark') {
+            const u = safeStr(c.url);
+            if (u) {
+                nodes.push(
+                    renderField((i18n.url || 'URL') + ':', a({ href: u, target: '_blank', rel: 'noopener noreferrer' }, u))
+                );
+            }
+        } else if (t === 'image') {
+            const u = safeStr(c.url);
+            if (u && isMsgId(u)) {
+                nodes.push(
+                    div({ class: 'card-field', style: 'margin-top:10px;' },
+                        img({ src: `/blob/${encodeURIComponent(u)}`, class: 'feed-image img-content' })
+                    )
+                );
+            }
+        } else if (t === 'audio') {
+            const u = safeStr(c.url);
+            if (u && isMsgId(u)) {
+                nodes.push(
+                    div({ class: 'card-field', style: 'margin-top:10px;' },
+                        audioHyperaxe({ controls: true, src: `/blob/${encodeURIComponent(u)}` })
+                    )
+                );
+            }
+        } else if (t === 'video') {
+            const u = safeStr(c.url);
+            if (u && isMsgId(u)) {
+                nodes.push(
+                    div({ class: 'card-field', style: 'margin-top:10px;' },
+                        videoHyperaxe({ controls: true, src: `/blob/${encodeURIComponent(u)}` })
+                    )
+                );
+            }
+	} else if (t === 'document') {
+	  const u = safeStr(c.url);
+	  if (u && isMsgId(u)) {
+	    const safeId = String(msg.key || u).replace(/[^a-zA-Z0-9_-]/g, '');
+	    nodes.push(
+	      div({ class: 'card-field', style: 'margin-top:10px;' },
+		div({
+		  id: `pdf-container-${safeId}`,
+		  class: 'pdf-viewer-container',
+		  'data-pdf-url': `/blob/${encodeURIComponent(u)}`
+		})
+	      )
+	    );
+	  }
 
-  if (isThreadTarget) {
-    messageClasses.push("thread-target");
-  }
+        } else if (t === 'market') {
+            const status = safeStr(c.status);
+            const price = (typeof c.price !== 'undefined') ? safeStr(c.price) : '';
+            const r1 = renderField((i18n.status || 'Status') + ':', status ? safeUpper(status) : '');
+            const r2 = renderField((i18n.price || 'Price') + ':', price ? `${price} ECO` : '');
+            if (r1) nodes.push(r1);
+            if (r2) nodes.push(r2);
+        } else if (t === 'project') {
+            const status = safeStr(c.status);
+            const r1 = renderField((i18n.status || 'Status') + ':', status ? safeUpper(status) : '');
+            if (r1) nodes.push(r1);
+        } else if (t === 'job') {
+            const status = safeStr(c.status);
+            const location = safeStr(c.location);
+            const salary = (typeof c.salary !== 'undefined') ? safeStr(c.salary) : '';
 
-  if (isBlocked) {
-    messageClasses.push("blocked");
-    return section(
-      {
-        id: msg.key,
-        class: messageClasses.join(" "),
-      },
-      i18n.relationshipBlockingPost
-    );
-  }
+            const r1 = renderField((i18n.status || 'Status') + ':', status ? safeUpper(status) : '');
+            const r2 = renderField((i18n.jobLocation || 'Location') + ':', location ? safeUpper(location) : '');
+            const r3 = renderField((i18n.jobSalary || 'Salary') + ':', salary ? `${salary} ECO` : '');
 
-  const postOptions = {
-    post: null,
-    comment: i18n.commentDescription({ parentUrl: url.parent }),
-    subtopic: i18n.subtopicDescription({ parentUrl: url.parent }),
-    mystery: i18n.mysteryDescription,
-  };
+            if (r1) nodes.push(r1);
+            if (r2) nodes.push(r2);
+            if (r3) nodes.push(r3);
+        }
 
-  const articleContent = article(
-    { class: "content" },
-    hasContentWarning ? div({ class: "post-subject" }, msg.value?.content?.contentWarning) : null,
-    articleElement
-  );
+        return article({ class: 'content' }, ...nodes.filter(Boolean));
+    };
 
-  const fragment = section(
-    {
-      id: msg.key,
-      class: messageClasses.join(" "),
-    },
-    header(
-      div(
-        { class: "header-content" },
-        a(
-          { href: url.author },
-          img({ class: "avatar-profile", src: url.avatar, alt: "" })
-        ),
-        span({ class: "created-at" }, `${i18n.createdBy} `, a({ href: url.author }, "@", name), ` | ${timeAbsolute} | ${i18n.sendTime} `, a({ href: url.link }, timeAgo), ` ${i18n.timeAgo}`),
-        isPrivate ? "🔒" : null,
-        isPrivate ? recps : null
-      )
-    ),
-    articleContent,
-    footer(
-      div(
-        form(
-          { action: url.likeForm, method: "post" },
-          button(
+    const rawText = content.text || "";
+    const emptyContent = "<p>undefined</p>\n";
+
+    const isProbablyHtml =
+        typeof rawText === "string" &&
+        /<\/?[a-z][\s\S]*>/i.test(rawText.trim());
+
+    let articleElement;
+
+    if (contentType !== 'post' && contentType !== 'blog' && THREAD_ENTITY_TYPES.has(contentType)) {
+        articleElement = renderEntityRoot(content);
+    } else if (rawText === emptyContent) {
+        articleElement = article(
+            { class: "content" },
+            div(
+                { class: "card-field", style: "margin-bottom:10px;" },
+                span({ class: "card-label" }, (i18n.invalidPost || 'Invalid content') + ':'),
+                span({ class: "card-value" }, (i18n.invalidPostHint || 'This message has invalid/empty text.'))
+            ),
+            details(
+                summary(i18n.viewJson || 'View JSON'),
+                pre({
+                    innerHTML: highlightJs.highlight(
+                        JSON.stringify(msg, null, 2),
+                        { language: "json", ignoreIllegals: true }
+                    ).value,
+                })
+            )
+        );
+    } else if (isProbablyHtml) {
+        let html = rawText;
+        if (!/<a\b[^>]*>/i.test(html)) {
+            html = html.replace(
+                /(https?:\/\/[^\s<]+)/g,
+                (u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`
+            );
+        }
+        articleElement = article({ class: "content", innerHTML: html });
+    } else {
+        articleElement = article(
+            { class: "content" },
+            p({ class: "post-text" }, ...renderUrl(rawText))
+        );
+    }
+
+    if (preview) {
+        return section(
+            { id: msg.key, class: "post-preview" },
+            hasContentWarning
+                ? details(summary(msg.value?.content?.contentWarning), articleElement)
+                : articleElement
+        );
+    }
+
+    const ts_received = msg.value?.meta?.timestamp?.received;
+    const iso =
+        (ts_received && ts_received.iso8601) ||
+        (typeof msg.value?.timestamp === 'number' ? new Date(msg.value.timestamp).toISOString() : null) ||
+        (content.createdAt ? new Date(content.createdAt).toISOString() : null);
+
+    if (!iso || !moment(iso, moment.ISO_8601, true).isValid()) {
+        return null;
+    }
+
+    const validTimestamp = moment(iso, moment.ISO_8601);
+    const timeAgo = validTimestamp.fromNow();
+    const timeAbsolute = validTimestamp.toISOString().split(".")[0].replace("T", " ");
+
+    const likeButton = msg.value?.meta?.voted
+        ? { value: 0, class: "liked" }
+        : { value: 1, class: null };
+
+    const likeCount = msg.value?.meta?.votes?.length || 0;
+    const maxLikedNameLength = 16;
+    const maxLikedNames = 16;
+
+    const likedByNames = msg.value?.meta?.votes
+        .slice(0, maxLikedNames)
+        .map((person) => person.name)
+        .map((n) => n.slice(0, maxLikedNameLength))
+        .join(", ");
+
+    const additionalLikesMessage =
+        likeCount > maxLikedNames ? `+${likeCount - maxLikedNames} more` : ``;
+
+    const likedByMessage =
+        likeCount > 0 ? `${likedByNames} ${additionalLikesMessage}` : null;
+
+    const messageClasses = ["post"];
+    const recps = [];
+
+    const addRecps = (recpsInfo) => {
+        recpsInfo.forEach((recp) => {
+            recps.push(
+                a(
+                    { href: `/author/${encodeURIComponent(recp.feedId)}` },
+                    img({ class: "avatar", src: recp.avatarUrl, alt: "" })
+                )
+            );
+        });
+    };
+
+    if (isPrivate) {
+        messageClasses.push("private");
+        addRecps(msg.value?.meta?.recpsInfo || []);
+    }
+
+    if (isThreadTarget) {
+        messageClasses.push("thread-target");
+    }
+
+    if (isBlocked) {
+        messageClasses.push("blocked");
+        return section(
             {
-              name: "voteValue",
-              type: "submit",
-              value: likeButton.value,
-              class: likeButton.class,
-              title: likedByMessage,
+                id: msg.key,
+                class: messageClasses.join(" "),
             },
-            `☉ ${likeCount}`
-          )
+            i18n.relationshipBlockingPost
+        );
+    }
+
+    const articleContent = article(
+        { class: "content" },
+        hasContentWarning ? div({ class: "post-subject" }, msg.value?.content?.contentWarning) : null,
+        articleElement
+    );
+
+    const fragment = section(
+        {
+            id: msg.key,
+            class: messageClasses.join(" "),
+        },
+        header(
+            div(
+                { class: "header-content" },
+                a(
+                    { href: url.author },
+                    img({ class: "avatar-profile", src: url.avatar, alt: "" })
+                ),
+                span(
+                    { class: "created-at" },
+                    `${i18n.createdBy} `,
+                    a({ href: url.author }, "@", name),
+                    ` | ${timeAbsolute} | ${i18n.sendTime} `,
+                    a({ href: url.link }, timeAgo)
+                ),
+                isPrivate ? "🔒" : null,
+                isPrivate ? recps : null
+            )
         ),
-        a({ href: url.comment }, i18n.comment),
-        isPrivate || isRoot || isFork
-          ? null
-          : a({ href: url.subtopic }, nbsp, i18n.subtopic)
-      ),
-      br()
-    )
-  );
+        articleContent,
+        footer(
+            div(
+                form(
+                    { action: url.likeForm, method: "post" },
+                    button(
+                        {
+                            name: "voteValue",
+                            type: "submit",
+                            value: likeButton.value,
+                            class: likeButton.class,
+                            title: likedByMessage,
+                        },
+                        `☉ ${likeCount}`
+                    )
+                ),
+                a({ href: url.comment }, i18n.comment),
+                isPrivate || isRoot || isFork
+                    ? null
+                    : a({ href: url.subtopic }, nbsp, i18n.subtopic)
+            ),
+            br()
+        )
+    );
 
-  const threadSeparator = [br()];
+    const threadSeparator = [br()];
 
-  if (aside) {
-    return [fragment, postAside(msg), isRoot ? threadSeparator : null];
-  } else {
-    return fragment;
-  }
+    if (aside) {
+        return [fragment, postAside(msg), isRoot ? threadSeparator : null];
+    } else {
+        return fragment;
+    }
 };
 
 exports.editProfileView = ({ name, description }) =>
@@ -864,142 +1485,91 @@ exports.authorView = ({
   name,
   relationship,
   ecoAddress,
-  karmaScore = 0
+  karmaScore = 0,
+  lastActivityBucket
 }) => {
+  const linkUrl = `/author/${encodeURIComponent(feedId)}`;
+
   const mention = `[@${name}](${feedId})`;
   const markdownMention = highlightJs.highlight(mention, { language: "markdown", ignoreIllegals: true }).value;
 
   const contactForms = [];
-
   const addForm = ({ action }) =>
     contactForms.push(
       form(
-        {
-          action: `/${action}/${encodeURIComponent(feedId)}`,
-          method: "post",
-        },
-        button(
-          {
-            type: "submit",
-          },
-          i18n[action]
-        )
+        { action: `/${action}/${encodeURIComponent(feedId)}`, method: "post" },
+        button({ type: "submit" }, i18n[action])
       )
     );
 
   if (relationship.me === false) {
-    if (relationship.following) {
-      addForm({ action: "unfollow" });
-    } else if (relationship.blocking) {
-      addForm({ action: "unblock" });
-    } else {
-      addForm({ action: "follow" });
-      addForm({ action: "block" });
-    }
+    if (relationship.following) addForm({ action: "unfollow" });
+    else if (relationship.blocking) addForm({ action: "unblock" });
+    else { addForm({ action: "follow" }); addForm({ action: "block" }) }
   }
 
   const relationshipMessage = (() => {
     if (relationship.me) return i18n.relationshipYou;
     const following = relationship.following === true;
     const followsMe = relationship.followsMe === true;
-    if (following && followsMe) {
-      return i18n.relationshipMutuals;
-    }
-    const messages = [];
-    messages.push(
-      following
-        ? i18n.relationshipFollowing
-        : i18n.relationshipNone
-    );
-    messages.push(
-      followsMe
-        ? i18n.relationshipTheyFollow
-        : i18n.relationshipNotFollowing
-    );
-    return messages.join(". ") + ".";
+    if (following && followsMe) return i18n.relationshipMutuals;
+    const messagesArr = [];
+    messagesArr.push(following ? i18n.relationshipFollowing : i18n.relationshipNone);
+    messagesArr.push(followsMe ? i18n.relationshipTheyFollow : i18n.relationshipNotFollowing);
+    return messagesArr.join(". ") + ".";
   })();
+
+  const bucket = lastActivityBucket || 'red';
+  const dotClass = bucket === "green" ? "green" : bucket === "orange" ? "orange" : "red";
 
   const prefix = section(
     { class: "message" },
     div(
       { class: "profile" },
       div({ class: "avatar-container" },
-        img({ class: "avatar", src: avatarUrl }),
+        img({ class: "inhabitant-photo-details", src: avatarUrl }),
         h1({ class: "name" }, name),
       ),
-      pre({
-        class: "md-mention",
-        innerHTML: markdownMention,
-      })
+      pre({ class: "md-mention", innerHTML: markdownMention }),
+      p(a({ class: "user-link", href: `/author/${encodeURIComponent(feedId)}` }, feedId)),
+      div({ class: "profile-metrics" },
+        p(`${i18n.bankingUserEngagementScore}: `, strong(karmaScore !== undefined ? karmaScore : 0)),
+        div({ class: "inhabitant-last-activity" },
+          span({ class: "label" }, `${i18n.inhabitantActivityLevel}:`),
+          span({ class: `activity-dot ${dotClass}` }, "")
+        ),
+        ecoAddress
+          ? div({ class: "eco-wallet" }, p(`${i18n.bankWalletConnected}: `, strong(ecoAddress)))
+          : div({ class: "eco-wallet" }, p(i18n.ecoWalletNotConfigured || "ECOin Wallet not configured"))
+      )
     ),
     description !== "" ? article({ innerHTML: markdown(description) }) : null,
     footer(
       div(
         { class: "profile" },
         ...contactForms.map(form => span({ style: "font-weight: bold;" }, form)),
-        relationship.me ? (
-          span({ class: "status you" }, i18n.relationshipYou)
-        ) : (
-          div({ class: "relationship-status" },
-            relationship.blocking && relationship.blockedBy
-              ? span({ class: "status blocked" }, i18n.relationshipMutualBlock)
-            : [
-                relationship.blocking
-                  ? span({ class: "status blocked" }, i18n.relationshipBlocking)
-                  : null,
-                relationship.blockedBy
-                  ? span({ class: "status blocked-by" }, i18n.relationshipBlockedBy)
-                  : null,
-                relationship.following && relationship.followsMe
-                  ? span({ class: "status mutual" }, i18n.relationshipMutuals)
-                  : [
-                      span(
-                        { class: "status supporting" },
-                        relationship.following
-                          ? i18n.relationshipFollowing
-                          : i18n.relationshipNone
-                      ),
-                      span(
-                        { class: "status supported-by" },
-                        relationship.followsMe
-                          ? i18n.relationshipTheyFollow
-                          : i18n.relationshipNotFollowing
-                      )
-                   ]
-                ]
-          )
-        ),
-	p(
-	  `${i18n.bankingUserEngagementScore}: `,
-	  strong(karmaScore !== undefined ? karmaScore : 0)
-	),
-	ecoAddress
-	  ? div({ class: "eco-wallet" },
-              p(`${i18n.bankWalletConnected}: `, strong(ecoAddress))
-	    )
-	  : div({ class: "eco-wallet" },
-	      p(i18n.ecoWalletNotConfigured || "ECOin Wallet not configured")
-	    ),
         relationship.me
-          ? a({ href: `/profile/edit`, class: "btn" }, nbsp, i18n.editProfile)
-          : null,
+          ? span({ class: "status you" }, i18n.relationshipYou)
+          : div({ class: "relationship-status" },
+              relationship.blocking && relationship.blockedBy
+                ? span({ class: "status blocked" }, i18n.relationshipMutualBlock)
+                : [
+                    relationship.blocking ? span({ class: "status blocked" }, i18n.relationshipBlocking) : null,
+                    relationship.blockedBy ? span({ class: "status blocked-by" }, i18n.relationshipBlockedBy) : null,
+                    relationship.following && relationship.followsMe
+                      ? span({ class: "status mutual" }, i18n.relationshipMutuals)
+                      : [
+                          span({ class: "status supporting" }, relationship.following ? i18n.relationshipFollowing : i18n.relationshipNone),
+                          span({ class: "status supported-by" }, relationship.followsMe ? i18n.relationshipTheyFollow : i18n.relationshipNotFollowing)
+                        ]
+                  ]
+            ),
+        relationship.me ? a({ href: `/profile/edit`, class: "btn" }, nbsp, i18n.editProfile) : null,
         a({ href: `/likes/${encodeURIComponent(feedId)}`, class: "btn" }, i18n.viewLikes),
-        !relationship.me
-          ? a(
-              {
-                href: `/pm?recipients=${encodeURIComponent(feedId)}`,
-                class: "btn"
-              },
-              i18n.pmCreateButton
-            )
-          : null
+        !relationship.me ? a({ href: `/pm?recipients=${encodeURIComponent(feedId)}`, class: "btn" }, i18n.pmCreateButton) : null
       )
     )
   );
-
-  const linkUrl = relationship.me
-    ? "/profile/"
-    : `/author/${encodeURIComponent(feedId)}/`;
 
   let items = messages.map((msg) => post({ msg }));
   if (items.length === 0) {
@@ -1073,7 +1643,7 @@ exports.previewCommentView = async ({
     throw new Error("Missing parentMessage or value");
   }
 
-  const publishAction = `/comment/${encodeURIComponent(messages[0].key)}`;
+  const publishAction = `/comment/${encodeURIComponent(parentMessage.key)}`;
   const preview = generatePreview({
     previewData,
     contentWarning,
@@ -1093,41 +1663,68 @@ exports.commentView = async (
   text,
   contentWarning
 ) => {
-  let markdownMention;
-  const authorName = parentMessage?.value?.meta?.author?.name || "Anonymous";
-  
-  const messageElements = await Promise.all(
-    messages.reverse().map(async (message) => {  
-      const isRootMessage = message.key === parentMessage.key;
-      const messageAuthorName = message.value?.meta?.author?.name || "Anonymous";
-      const authorFeedId = myFeedId;
-      
-      if (authorFeedId !== myFeedId) {
-        if (message.key === parentMessage.key) {
-          const x = `[@${messageAuthorName}](${authorFeedId})\n\n`;
-          markdownMention = x;
-        }
-      }
-      const timestamp = message?.value?.meta?.timestamp?.received;
-      const validTimestamp = moment(timestamp, moment.ISO_8601, true); 
-      const timeAgo = validTimestamp.isValid() 
-        ? validTimestamp.fromNow() 
-        : "Invalid time"; 
-      const messageId = message.key.endsWith('.sha256') ? message.key.slice(0, -7) : message.key;
-      const result = await post({ msg: { ...message, key: messageId } });
-      return result; 
-    })
-  );
+  if (!parentMessage || !parentMessage.value) {
+    throw new Error("Missing parentMessage or value");
+  }
 
-  const action = `/comment/preview/${encodeURIComponent(messages[0].key)}`;
+  const parentKey = parentMessage.key;
+  const threadRoot = parentMessage.value?.content?.root || parentKey;
+
+  const messagesInput = Array.isArray(messages) ? messages : [];
+  const merged = [parentMessage, ...messagesInput];
+
+  const filtered = merged.filter((m) => {
+    if (!m || !m.value) return false;
+    return m.key === threadRoot || m.value?.content?.root === threadRoot;
+  });
+
+  const seen = new Set();
+  const threadMessages = [];
+  for (const m of filtered) {
+    if (m && m.key && !seen.has(m.key)) {
+      seen.add(m.key);
+      threadMessages.push(m);
+    }
+  }
+
+  const tsNum = (m) => {
+    const n1 = Number(m?.value?.timestamp);
+    if (Number.isFinite(n1) && n1 > 0) return n1;
+    const iso = m?.value?.meta?.timestamp?.received?.iso8601;
+    const raw = m?.value?.meta?.timestamp?.received;
+    const n2 = iso ? Date.parse(iso) : (raw ? Date.parse(raw) : NaN);
+    if (Number.isFinite(n2) && n2 > 0) return n2;
+    const createdAt = m?.value?.content?.createdAt;
+    const n3 = createdAt ? Date.parse(createdAt) : NaN;
+    if (Number.isFinite(n3) && n3 > 0) return n3;
+    return 0;
+  };
+
+  threadMessages.sort((a, b) => tsNum(a) - tsNum(b));
+
+  const authorName = parentMessage.value?.meta?.author?.name || parentMessage.value?.author || "Anonymous";
+
+  let markdownMention = "";
+  const parentAuthorFeedId = parentMessage.value?.author;
+  const parentAuthorName =
+    parentMessage.value?.meta?.author?.name ||
+    (typeof parentAuthorFeedId === "string"
+      ? (parentAuthorFeedId.startsWith("@") ? parentAuthorFeedId.slice(1) : parentAuthorFeedId)
+      : "Anonymous");
+
+  if (parentAuthorFeedId && parentAuthorFeedId !== myFeedId) {
+    markdownMention = `[@${parentAuthorName}](${parentAuthorFeedId})\n\n`;
+  }
+
+  const messageElements = threadMessages.map((m) => post({ msg: m }));
+
+  const action = `/comment/preview/${encodeURIComponent(parentKey)}`;
   const method = "post";
-  const isPrivate = parentMessage?.value?.meta?.private;
-  const publicOrPrivate = isPrivate ? i18n.commentPrivate : i18n.commentPublic;
-  const maybeSubtopicText = isPrivate ? [null] : i18n.commentWarning;
+  const isPrivate = Boolean(parentMessage.value?.meta?.private);
 
   return template(
     i18n.commentTitle({ authorName }),
-    div({ class: "thread-container" }, messageElements),
+    div({ class: "thread-container" }, ...messageElements),
     form(
       { action, method, enctype: "multipart/form-data" },
       i18n.blogSubject,
@@ -1139,23 +1736,23 @@ exports.commentView = async (
           type: "text",
           class: "contentWarning",
           value: contentWarning ? contentWarning : "",
-          placeholder: i18n.contentWarningPlaceholder,
+          placeholder: i18n.contentWarningPlaceholder
         })
       ),
       br,
       label({ for: "text" }, i18n.blogMessage),
       br,
-      textarea(
-        {
-          autofocus: true,
-          required: true,
-          name: "text",
-          rows: "6",
-          cols: "50",
-          placeholder: i18n.publishWarningPlaceholder,
-        },
-        text ? text : isPrivate ? null : markdownMention
-      ),
+	textarea(
+	  {
+	    autofocus: true,
+	    required: true,
+	    name: "text",
+	    rows: "6",
+	    cols: "50",
+	    placeholder: i18n.publishWarningPlaceholder
+	  },
+	  text ? text : null
+	),
       br,
       label(
         { for: "blob" },
@@ -1573,14 +2170,23 @@ exports.publishCustomView = async () => {
 exports.threadView = ({ messages }) => {
   const rootMessage = messages[0];
   const rootAuthorName = rootMessage.value.meta.author.name;
-  const rootSnippet = postSnippet(
-    lodash.get(rootMessage, "value.content.text", i18n.mysteryDescription)
+
+  const needsPdfViewer = Array.isArray(messages) && messages.some((m) => {
+    const t = String(m?.value?.content?.type || "").toLowerCase();
+    return t === "document";
+  });
+
+  const tpl = template(
+    [`@${rootAuthorName}`],
+    div(thread(messages))
   );
-  return template([`@${rootAuthorName}`], 
-    div(
-    thread(messages)
-    )
-  );
+
+  return `${tpl}${
+    needsPdfViewer
+      ? `<script type="module" src="/js/pdf.min.mjs"></script>
+         <script src="/js/pdf-viewer.js"></script>`
+      : ""
+  }`;
 };
 
 exports.publishView = (preview, text, contentWarning) => {
@@ -1645,42 +2251,150 @@ exports.publishView = (preview, text, contentWarning) => {
   );
 };
 
+//generate preview
+const ensureAt = (id) => {
+  const s = String(id || "").trim()
+  if (!s) return ""
+  return s.startsWith("@") ? s : `@${s.replace(/^@+/, "")}`
+}
+
+const stripAt = (id) => String(id || "").trim().replace(/^@+/, "")
+
+const authorHref = (feed) => `/author/${encodeURIComponent(ensureAt(feed))}`
+
+const escapeRegex = (s) => String(s || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+const escapeHtml = (s) => {
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+const normalizeMentionLinks = (text) => {
+  let t = String(text || "")
+  t = t.replace(
+    /\[@([^\]]+)\]\s*\(\s*@?([^) \t\r\n]+\.ed25519)\s*\)/g,
+    (_m, label, feed) => `[@${String(label || "").replace(/^@+/, "")}](@${String(feed || "").replace(/^@+/, "")})`
+  )
+  return t
+}
+
+const injectResolvedMentions = (text, mentions) => {
+  let out = String(text || "")
+  const obj = mentions && typeof mentions === "object" ? mentions : {}
+
+  const entries = Object.entries(obj)
+    .map(([k, v]) => [String(k || "").trim().replace(/\s+/g, " "), Array.isArray(v) ? v : []])
+    .filter(([k, v]) => k && v.length === 1)
+
+  entries.sort((a, b) => b[0].length - a[0].length)
+
+  for (const [token, list] of entries) {
+    const m = list[0] || {}
+    const feed = ensureAt(m.feed || m.link || m.id || "")
+    if (!feed) continue
+
+    const label = String(m.name || token).replace(/^@+/, "")
+    const parts = token.split(/\s+/).filter(Boolean).map(escapeRegex)
+    if (!parts.length) continue
+
+    const tokenPattern = parts.join("\\s+")
+    const re = new RegExp(`(^|\\s)(?!\\[)@${tokenPattern}(?=\\b|$)`, "g")
+    out = out.replace(re, (match, prefix) => `${prefix}[@${label}](${feed})`)
+  }
+
+  return out
+}
+
+const markdownMentionsToHtml = (markdownText) => {
+  const escaped = escapeHtml(String(markdownText || ""))
+  const withBr = escaped.replace(/\r\n|\r|\n/g, "<br>")
+
+  const withImages = withBr.replace(
+    /!\[([^\]]*)\]\(\s*(&[^)\s]+\.sha256)\s*\)/g,
+    (_m, alt, blob) => `<img src="/blob/${encodeURIComponent(blob)}" alt="${escapeHtml(alt)}">`
+  )
+
+  const withMentions = withImages.replace(
+    /\[@([^\]]+)\]\(\s*@?([^) \t\r\n]+\.ed25519)\s*\)/g,
+    (_m, label, feed) => {
+      const href = authorHref(feed)
+      const shown = `@${String(label || "").replace(/^@+/, "")}`
+      return `<a class="mention" href="${href}">${escapeHtml(shown)}</a>`
+    }
+  )
+
+  const withLinks = withMentions.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    (u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`
+  )
+
+  return withLinks
+}
+
 const generatePreview = ({ previewData, contentWarning, action }) => {
-  const { authorMeta, formattedText, mentions } = previewData;
-  const renderedText = formattedText;
-  const msg = {
-    key: "%non-existent.preview",
-    value: {
-      author: authorMeta.id,
-      content: {
-        type: "post",
-        text: renderedText,
-        mentions: mentions,
-      },
-      timestamp: Date.now(),
-      meta: {
-        isPrivate: false,
-        votes: [],
-        author: {
-          name: authorMeta.name,
-          avatar: {
-            url: `http://localhost:3000/blob/${encodeURIComponent(authorMeta.image)}`,
-          },
-        },
-      },
-    },
-  };
-  if (contentWarning) {
-    msg.value.content.contentWarning = contentWarning;
-  }
-  if (msg.value.meta.author.avatar.url === 'http://localhost:3000/blob/%260000000000000000000000000000000000000000000%3D.sha256') {
-    msg.value.meta.author.avatar.url = '/assets/images/default-avatar.png';
-  }
-  const ts = new Date(msg.value.timestamp);
-  lodash.set(msg, "value.meta.timestamp.received.iso8601", ts.toISOString());
-  const ago = Date.now() - Number(ts);
-  const prettyAgo = prettyMs(ago, { compact: true });
-  lodash.set(msg, "value.meta.timestamp.received.since", prettyAgo);
+  const mentions =
+    previewData && previewData.mentions && typeof previewData.mentions === "object"
+      ? previewData.mentions
+      : {}
+
+  const rawText = String((previewData && previewData.text) || "")
+  const normalized = normalizeMentionLinks(rawText)
+  const injected = injectResolvedMentions(normalized, mentions)
+  const publishText = normalizeMentionLinks(injected)
+
+  const previewHtml = markdownMentionsToHtml(publishText)
+
+  const mentionCards = Object.entries(mentions)
+    .map(([_token, matches]) => {
+      const list = Array.isArray(matches) ? matches : []
+      const first = list.find((x) => x && (x.feed || x.link || x.id)) || null
+      if (!first) return null
+
+      const feed = ensureAt(first.feed || first.link || first.id || "")
+      if (!feed) return null
+
+      const nameRaw = String(first.name || stripAt(feed) || "")
+      const nameText = nameRaw.startsWith("@") ? nameRaw : `@${nameRaw}`
+
+      const rel = first.rel || {}
+      const relText = rel.followsMe ? i18n.relationshipMutuals : i18n.relationshipNotMutuals
+      const emoji = rel.followsMe ? "☍" : "⚼"
+
+      const avatar = first.img || first.image || ""
+      const avatarUrl =
+        typeof avatar === "string" && avatar.startsWith("&")
+          ? `/blob/${encodeURIComponent(avatar)}`
+          : (typeof avatar === "string" && avatar ? avatar : "/assets/images/default-avatar.png")
+
+      return div(
+        { class: "mention-card" },
+        a({ href: authorHref(feed) }, img({ src: avatarUrl, class: "avatar-profile" })),
+        br,
+        div(
+          { class: "mention-name" },
+          span({ class: "label" }, `${i18n.mentionsName}: `),
+          a({ href: authorHref(feed) }, nameText)
+        ),
+        div(
+          { class: "mention-relationship" },
+          span({ class: "label" }, `${i18n.mentionsRelationship}:`),
+          span({ class: "relationship" }, relText),
+          div(
+            { class: "mention-relationship-details" },
+            span({ class: "emoji" }, emoji),
+            span(
+              { class: "mentions-listing" },
+              a({ class: "user-link", href: authorHref(feed) }, `@${stripAt(feed)}`)
+            )
+          )
+        )
+      )
+    })
+    .filter(Boolean)
 
   return div(
     section(
@@ -1688,80 +2402,48 @@ const generatePreview = ({ previewData, contentWarning, action }) => {
       div(
         { class: "preview-content" },
         h2(i18n.messagePreview),
-        post({ msg, preview: true })
-      ),
+        contentWarning ? div({ class: "content-warning-preview" }, escapeHtml(contentWarning)) : null,
+        div({ class: "preview-rendered", innerHTML: previewHtml })
+      )
     ),
     section(
       { class: "mention-suggestions" },
-      Object.keys(mentions).map((name) => {
-        const matches = mentions[name];
-        return div(
-          h2(i18n.mentionsMatching),
-          { class: "mention-card" },
-          a(
-            {
-              href: `/author/@${encodeURIComponent(matches[0].feed)}`,
-            },
-            img({ src: msg.value.meta.author.avatar.url, class: "avatar-profile" })
-          ),
-          br,
-          div(
-            { class: "mention-name" },
-            span({ class: "label" }, `${i18n.mentionsName}: `),
-            a(
-              {
-                href: `/author/@${encodeURIComponent(matches[0].feed)}`,
-              },
-              `@${authorMeta.name}`
-            )
-          ),
-          div(
-            { class: "mention-relationship" },
-            span({ class: "label" }, `${i18n.mentionsRelationship}:`),
-            span({ class: "relationship" }, matches[0].rel.followsMe ? i18n.relationshipMutuals : i18n.relationshipNotMutuals),
-            { class: "mention-relationship-details" },
-            span({ class: "emoji" }, matches[0].rel.followsMe ? "☍" : "⚼"),
-            span({ class: "mentions-listing" },
-              a({ class: 'user-link', href: `/author/@${encodeURIComponent(matches[0].feed)}` }, `@${matches[0].feed}`)
-            )
-          )
-        );
-      })
+      mentionCards.length ? h2(i18n.mentionsMatching) : null,
+      ...mentionCards
     ),
     section(
       form(
         { action, method: "post" },
-        [
-          input({ type: "hidden", name: "text", value: renderedText }),
-          input({ type: "hidden", name: "contentWarning", value: contentWarning || "" }),
-          input({ type: "hidden", name: "mentions", value: JSON.stringify(mentions) }),
-          button({ type: "submit" }, i18n.publish)
-        ]
+        input({ type: "hidden", name: "text", value: publishText }),
+        input({ type: "hidden", name: "contentWarning", value: contentWarning || "" }),
+        input({ type: "hidden", name: "mentions", value: JSON.stringify(mentions) }),
+        button({ type: "submit" }, i18n.publish)
       )
     )
-  );
-};
+  )
+}
 
 exports.previewView = ({ previewData, contentWarning }) => {
-  const publishAction = "/publish";
+  const publishAction = "/publish"
   const preview = generatePreview({
     previewData,
     contentWarning,
     action: publishAction,
-  });
-  return exports.publishView(preview, previewData.formattedText, contentWarning);
-};
+  })
+  return exports.publishView(preview, (previewData && previewData.text) || "", contentWarning)
+}
 
 const viewInfoBox = ({ viewTitle = null, viewDescription = null }) => {
   if (!viewTitle && !viewDescription) {
-    return null;
+    return null
   }
   return section(
     { class: "viewInfo" },
     viewTitle ? h1(viewTitle) : null,
     viewDescription ? em(viewDescription) : null
-  );
-};
+  )
+}
+//generate preview
 
 exports.likesView = async ({ messages, feed, name }) => {
   const authorLink = a(

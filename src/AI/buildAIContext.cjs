@@ -1,71 +1,104 @@
-const path = require('path');
+const pull = require('../server/node_modules/pull-stream')
+const { getConfig } = require('../configs/config-manager.js')
 
-const searchableTypes = [
-  'post', 'about', 'curriculum', 'tribe', 'transfer', 'feed',
-  'votes', 'vote', 'report', 'task', 'event', 'bookmark', 'document',
-  'image', 'audio', 'video', 'market', 'forum', 'job', 'project',
-  'contact', 'pub', 'pixelia', 'bankWallet', 'bankClaim', 'aiExchange'
-];
+const logLimit = getConfig().ssbLogStream?.limit || 1000
 
-const clip = (s, n) => String(s || '').slice(0, n);
-const squash = s => String(s || '').replace(/\s+/g, ' ').trim();
-const compact = s => squash(clip(s, 160));
+let cooler = null
+let ssb = null
+let opening = null
+
+function getCooler() {
+  let ssbPath = null
+  try { ssbPath = require.resolve('../server/SSB_server.js') } catch {}
+  if (ssbPath && require.cache[ssbPath]) {
+    if (!cooler) {
+      const gui = require('../client/gui.js')
+      cooler = gui({ offline: false })
+    }
+    return cooler
+  }
+  return null
+}
+
+async function openSsb() {
+  const c = getCooler()
+  if (!c) return null
+  if (ssb && ssb.closed === false) return ssb
+  if (!opening) opening = c.open().then(x => (ssb = x)).finally(() => { opening = null })
+  await opening
+  return ssb
+}
+
+const clip = (s, n) => String(s || '').slice(0, n)
+const squash = s => String(s || '').replace(/\s+/g, ' ').trim()
+const compact = s => squash(clip(s, 160))
+const normalize = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').replace(/[^\p{L}\p{N}\s]+/gu, '').trim()
 
 function fieldsForSnippet(type, c) {
-  switch (type) {
-    case 'aiExchange': return [c?.question, clip(squash(c?.answer || ''), 120)];
-    case 'post': return [c?.text, ...(c?.tags || [])];
-    case 'about': return [c?.about, c?.name, c?.description];
-    case 'curriculum': return [c?.name, c?.description, c?.location];
-    case 'tribe': return [c?.title, c?.description, ...(c?.tags || [])];
-    case 'transfer': return [c?.from, c?.to, String(c?.amount), c?.status];
-    case 'feed': return [c?.text, ...(c?.tags || [])];
-    case 'votes': return [c?.question, c?.status];
-    case 'vote': return [c?.vote?.link, String(c?.vote?.value)];
-    case 'report': return [c?.title, c?.severity, c?.status];
-    case 'task': return [c?.title, c?.status];
-    case 'event': return [c?.title, c?.date, c?.location];
-    case 'bookmark': return [c?.url, c?.description];
-    case 'document': return [c?.title, c?.description];
-    case 'image': return [c?.title, c?.description];
-    case 'audio': return [c?.title, c?.description];
-    case 'video': return [c?.title, c?.description];
-    case 'market': return [c?.title, String(c?.price), c?.status];
-    case 'forum': return [c?.title, c?.category, c?.text];
-    case 'job': return [c?.title, c?.job_type, String(c?.salary), c?.status];
-    case 'project': return [c?.title, c?.status, String(c?.progress)];
-    case 'contact': return [c?.contact];
-    case 'pub': return [c?.address?.key, c?.address?.host];
-    case 'pixelia': return [c?.author];
-    case 'bankWallet': return [c?.address];
-    case 'bankClaim': return [String(c?.amount), c?.epochId, c?.txid];
-    default: return [];
-  }
+  if (type === 'aiExchange') return [c?.question, clip(squash(c?.answer || ''), 120)]
+  return []
 }
 
 async function publishExchange({ q, a, ctx = [], tokens = {} }) {
-  // NOTE: Esta función requiere acceso al cliente SSB
-  // Por ahora retornamos un placeholder hasta que se configure correctamente
-  console.log('publishExchange: Función no implementada - requiere cliente SSB');
-  
+  const s = await openSsb()
+  if (!s) return null
   const content = {
     type: 'aiExchange',
     question: clip(String(q || ''), 2000),
     answer: clip(String(a || ''), 5000),
-    ctx: ctx.slice(0, 12).map(s => clip(String(s || ''), 800)),
+    ctx: ctx.slice(0, 12).map(x => clip(String(x || ''), 800)),
     timestamp: Date.now()
-  };
-
-  // Placeholder hasta que se configure correctamente con cooler
-  return Promise.resolve({ success: false, reason: 'SSB client not available' });
+  }
+  return new Promise((resolve, reject) => {
+    s.publish(content, (err, res) => err ? reject(err) : resolve(res))
+  })
 }
 
 async function buildContext(maxItems = 100) {
-
-  const context = "";
-  return `[CONTEXT]${context}[/CONTEXT]`;
-
+  const s = await openSsb()
+  if (!s) return ''
+  return new Promise((resolve) => {
+    pull(
+      s.createLogStream({ reverse: true, limit: logLimit }),
+      pull.collect((err, msgs) => {
+        if (err || !Array.isArray(msgs)) return resolve('')
+        const lines = []
+        for (const { value } of msgs) {
+          const c = value && value.content || {}
+          if (c.type !== 'aiExchange') continue
+          const d = new Date(value.timestamp || 0).toISOString().slice(0, 10)
+          const q = compact(c.question)
+          const a = compact(c.answer)
+          lines.push(`[${d}] (AIExchange) Q: ${q} | A: ${a}`)
+          if (lines.length >= maxItems) break
+        }
+        if (lines.length === 0) return resolve('')
+        resolve(`## AIEXCHANGE\n\n${lines.join('\n')}`)
+      })
+    )
+  })
 }
 
-module.exports = { fieldsForSnippet, buildContext, clip, publishExchange };
+async function getBestTrainedAnswer(question) {
+  const s = await openSsb()
+  if (!s) return null
+  const want = normalize(question)
+  return new Promise((resolve) => {
+    pull(
+      s.createLogStream({ reverse: true, limit: logLimit }),
+      pull.collect((err, msgs) => {
+        if (err || !Array.isArray(msgs)) return resolve(null)
+        for (const { value } of msgs) {
+          const c = value && value.content || {}
+          if (c.type !== 'aiExchange') continue
+          if (normalize(c.question) === want) {
+            return resolve({ answer: String(c.answer || '').trim(), ctx: Array.isArray(c.ctx) ? c.ctx : [] })
+          }
+        }
+        resolve(null)
+      })
+    )
+  })
+}
 
+module.exports = { fieldsForSnippet, buildContext, clip, publishExchange, getBestTrainedAnswer }
