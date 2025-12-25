@@ -34,8 +34,8 @@
 | 3 | ✅ COMPLETADO | Levantar contenedor | v0.6.3 funcionando ✅ |
 | 4 | ✅ COMPLETADO | Verificar acceso web localhost:3000 | Playwright verificado ✅ |
 | 5 | ✅ COMPLETADO | Crear identidad / perfil / avatar | AlephLucas ✅ |
-| 6 | 🔄 EN CURSO | **BACKUP credenciales USB** | CRÍTICO - hacer ANTES de PUB |
-| 7 | ⏳ PENDIENTE | Usar invitación PUB | Después del backup |
+| 6 | ✅ COMPLETADO | **BACKUP credenciales USB** | Backup completo en ALEPHLUCAS_WALLET_OASIS |
+| 7 | ✅ COMPLETADO | Usar invitación PUB | Conectado a La Plaza (solarnethub.com) ✅ |
 
 ### 📝 Tarea 5 - COMPLETADA ✅
 - Nombre: AlephLucas
@@ -50,6 +50,109 @@
 > ⚠️ **CRÍTICO**: Sin este backup, la identidad SSB se pierde para siempre.
 > No hay "recuperar contraseña" - es criptografía asimétrica.
 
+---
+
+### 📋 PROTOCOLO COMPLETO DE BACKUP (Paso a paso)
+
+Este protocolo genera un backup completo con:
+- Clave privada en texto plano (`secret`)
+- Clave privada cifrada (`oasis.enc`)
+- Metadatos de trazabilidad
+- Verificación de integridad
+
+#### Paso 1: Crear carpeta destino
+
+```bash
+# Reemplazar <DESTINO> por la ruta deseada (USB, otra carpeta, etc.)
+mkdir -p /<DESTINO>/<NOMBRE_WALLET>
+```
+
+#### Paso 2: Ejecutar script de backup
+
+```bash
+# Desde la raíz del proyecto
+bash ./docker-scripts/backup-keys.sh /<DESTINO>/<NOMBRE_WALLET>
+```
+
+Esto copia automáticamente:
+- `secret` (clave privada) con verificación SHA256
+- `config` (configuración del nodo)
+- `gossip.json` (peers conocidos)
+- `README.txt` (instrucciones de restauración)
+
+#### Paso 3: Exportar clave cifrada desde UI
+
+```bash
+# 1. Abrir navegador en:
+#    http://localhost:3000/legacy
+
+# 2. Copiar el password generado (32 chars hex) que aparece en la página
+#    Ejemplo: 3625b8df24bb4357d9049d552d7a2f01
+
+# 3. Pegarlo en el campo "Use lowercase, uppercase, numbers & symbols"
+
+# 4. Click "Export"
+#    → Esto genera /home/oasis/oasis.enc dentro del contenedor
+```
+
+#### Paso 4: Extraer archivo cifrado del contenedor
+
+```bash
+# Obtener nombre del contenedor
+docker ps --format "{{.Names}}" | grep oasis
+
+# Copiar oasis.enc al backup (reemplazar <CONTAINER_NAME>)
+docker cp <CONTAINER_NAME>:/home/oasis/oasis.enc /<DESTINO>/<NOMBRE_WALLET>/
+```
+
+#### Paso 5: Crear archivo de metadatos
+
+```bash
+cat > /<DESTINO>/<NOMBRE_WALLET>/EXPORT_METADATA.json << 'EOF'
+{
+  "backup_info": {
+    "created_at": "$(date -Iseconds)",
+    "session": "<NOMBRE_RAMA_GIT>",
+    "commit": "<HASH_COMMIT>"
+  },
+  "identity": {
+    "ssb_id": "<TU_SSB_ID>",
+    "profile_name": "<TU_NOMBRE_PERFIL>"
+  },
+  "exports": [
+    {"file": "secret", "method": "backup-keys.sh", "description": "Clave privada plana"},
+    {"file": "oasis.enc", "method": "Oasis UI /legacy", "description": "Clave cifrada AES-256-CBC"},
+    {"file": "config", "method": "backup-keys.sh", "description": "Configuración nodo"},
+    {"file": "gossip.json", "method": "backup-keys.sh", "description": "Lista peers"}
+  ]
+}
+EOF
+```
+
+#### Paso 6: Guardar password de cifrado
+
+```bash
+cat > /<DESTINO>/<NOMBRE_WALLET>/ENCRYPTION_PASSWORD.txt << 'EOF'
+Password: <EL_PASSWORD_DE_32_CHARS>
+Algoritmo: AES-256-CBC
+Para restaurar: http://localhost:3000/legacy → Import
+EOF
+```
+
+#### Paso 7: Verificar backup
+
+```bash
+# Verificar integridad
+sha256sum /<DESTINO>/<NOMBRE_WALLET>/secret
+# Debe coincidir con:
+sha256sum ./volumes-dev/ssb-data/secret
+
+# Listar contenido final
+ls -la /<DESTINO>/<NOMBRE_WALLET>/
+```
+
+---
+
 ### 🔍 Mecanismos de backup disponibles:
 
 | Método | Ubicación | Descripción |
@@ -58,69 +161,30 @@
 | **Script Docker** | `npm run backup-keys` | Copia archivos del volumen a carpeta local con verificación SHA256 |
 | **Manual** | Terminal | Copiar directamente `./volumes-dev/ssb-data/secret` |
 
-### Método 1: UI Web (recomendado para usuarios finales)
+### Archivos del backup:
 
-1. Navegar a `http://localhost:3000/settings`
-2. Ir a sección "Keys" / "Llaves" / "Legacy"
-3. Establecer password de 32+ caracteres
-4. Click "Export" → descarga `oasis.enc`
-5. Guardar `oasis.enc` en USB o nube cifrada
+| Archivo | Prioridad | Descripción | Método |
+|---------|-----------|-------------|--------|
+| `secret` | 🔴 CRÍTICO | Clave privada SSB (texto plano) | backup-keys.sh |
+| `oasis.enc` | 🔴 CRÍTICO | Clave privada cifrada AES-256-CBC | UI /legacy + docker cp |
+| `config` | 🟡 Importante | Configuración del nodo | backup-keys.sh |
+| `gossip.json` | 🟢 Opcional | Lista de peers conocidos | backup-keys.sh |
+| `EXPORT_METADATA.json` | 🟡 Importante | Trazabilidad de exports | Manual |
+| `ENCRYPTION_PASSWORD.txt` | 🔴 CRÍTICO | Password para oasis.enc | Manual |
+| `README.txt` | 🟢 Opcional | Instrucciones restauración | backup-keys.sh |
 
-### Método 2: Script Docker (recomendado para devs)
+### Placeholders para esta sesión:
 
-```bash
-# Backup a carpeta por defecto (./backups/)
-npm run backup-keys
+| Placeholder | Valor esta sesión | Descripción |
+|-------------|-------------------|-------------|
+| `<DESTINO>` | `/c/Users/aleph/OASIS` | Ruta base del backup |
+| `<NOMBRE_WALLET>` | `ALEPHLUCAS_WALLET_OASIS` | Nombre carpeta wallet |
+| `<CONTAINER_NAME>` | `oasis-server-dev` | Nombre del contenedor Docker |
+| `<TU_SSB_ID>` | `@rZql/UwfYArm00RnK19+9HlBZhK7gxE++m/opHBG7vo=.ed25519` | ID SSB |
+| `<TU_NOMBRE_PERFIL>` | `AlephLucas` | Nombre del perfil |
+| `<PASSWORD_32_CHARS>` | `3625b8df24bb4357d9049d552d7a2f01` | Password cifrado |
 
-# Backup a USB específico
-./docker-scripts/backup-keys.sh /e/MI_BACKUP_SSB
-
-# Backup a otra ubicación
-./docker-scripts/backup-keys.sh /ruta/destino
-```
-
-### Método 3: Manual (línea de comandos)
-
-| Archivo origen (host) | Descripción | Prioridad |
-|-----------------------|-------------|----------|
-| `./volumes-dev/ssb-data/secret` | **Clave privada SSB** | 🔴 CRÍTICO |
-| `./volumes-dev/ssb-data/config` | Configuración del nodo | 🟡 Importante |
-| `./volumes-dev/ssb-data/gossip.json` | Lista de peers conocidos | 🟢 Opcional |
-
-### Pasos del proceso:
-
-```bash
-# 1. Crear carpeta en USB (reemplazar <LETRA_USB> y <NOMBRE_WALLET>)
-mkdir -p /<LETRA_USB>/<NOMBRE_WALLET>
-
-# 2. Copiar clave privada (EL MÁS IMPORTANTE)
-cp ./volumes-dev/ssb-data/secret /<LETRA_USB>/<NOMBRE_WALLET>/
-
-# 3. Copiar configuración
-cp ./volumes-dev/ssb-data/config /<LETRA_USB>/<NOMBRE_WALLET>/
-
-# 4. Copiar lista de peers (opcional)
-cp ./volumes-dev/ssb-data/gossip.json /<LETRA_USB>/<NOMBRE_WALLET>/ 2>/dev/null || true
-
-# 5. Verificar
-ls -la /<LETRA_USB>/<NOMBRE_WALLET>/
-```
-
-### Verificación del backup:
-
-```bash
-# Comparar hash del archivo original vs backup
-sha256sum ./volumes-dev/ssb-data/secret
-sha256sum /<LETRA_USB>/<NOMBRE_WALLET>/secret
-# Deben ser IDÉNTICOS
-```
-
-### Variables para esta sesión:
-| Placeholder | Valor actual |
-|-------------|-------------|
-| `<LETRA_USB>` | ⚠️ **TEMPORAL**: `C:\Users\aleph\OASIS\` |
-| `<NOMBRE_WALLET>` | `ALEPHLUCAS_WALLET_OASIS` |
-| `<IDENTIDAD_SSB>` | `@rZql/UwfYArm00RnK19+9HlBZhK7gxE++m/opHBG7vo=.ed25519` |
+---
 
 ### ⚠️ WARNING: BACKUP TEMPORAL - NO ES SEGURO
 
@@ -135,13 +199,237 @@ sha256sum /<LETRA_USB>/<NOMBRE_WALLET>/secret
 
 ### ✅ Backup temporal completado:
 ```
-Ubicación: C:\Users\aleph\OASIS\ALEPHLUCAS_WALLET_OASIS\
-Archivos:
-  - secret (869 bytes) - CLAVE PRIVADA ✅
-  - config (406 bytes) - Configuración ✅
-  - gossip.json (2 bytes) - Peers ✅
+Ubicación: C:\Users\aleph\OASIS\ALEPHLUCAS_WALLET_OASIS\backup-completo\
+
+Archivos exportados:
+  - secret              (869 bytes) - Clave privada plana ✅ [CLI backup-keys.sh]
+  - oasis.enc           (880 bytes) - Clave privada cifrada ✅ [Oasis UI /legacy]
+  - config              (406 bytes) - Configuración ✅ [CLI backup-keys.sh]
+  - gossip.json         (2 bytes)   - Peers ✅ [CLI backup-keys.sh]
+  - EXPORT_METADATA.json            - Trazabilidad de exports ✅
+  - ENCRYPTION_PASSWORD.txt         - Password para oasis.enc ✅
+  - README.txt                      - Instrucciones de restauración ✅
   
-Hash SHA256 verificado: def0fc72eb668f2dda986fd9f54249fd37488d6f1c6a11af721ba0af15728d99
+Hash SHA256 secret: def0fc72eb668f2dda986fd9f54249fd37488d6f1c6a11af721ba0af15728d99
+Password oasis.enc: 3625b8df24bb4357d9049d552d7a2f01
+```
+
+---
+
+## 🌐 PROTOCOLO DE CONEXIÓN A PUB (Tarea 7) ✅ COMPLETADO
+
+> **¿Qué es un PUB?** Un PUB (Public Peer) es un servidor SSB que actúa como relay.
+> Sin un PUB, tu nodo solo puede comunicarse con peers en red local.
+> Con un PUB, te conectas a la red global SSB y sincronizas con otros usuarios.
+
+---
+
+### 📋 PROTOCOLO COMPLETO DE CONEXIÓN A PUB (Paso a paso)
+
+Este protocolo conecta tu nodo Oasis a un PUB de la red SSB y verifica la sincronización.
+
+#### Prerrequisitos:
+- ✅ Contenedor Oasis corriendo (`docker ps` muestra healthy)
+- ✅ Identidad SSB creada (secret generado)
+- ✅ Acceso web a `http://localhost:3000`
+- ✅ Código de invitación PUB válido
+
+---
+
+#### Paso 1: Obtener código de invitación PUB
+
+Los códigos de invitación PUB tienen el formato:
+```
+<host>:<puerto>:<@pub_id.ed25519>~<codigo_invitacion>
+```
+
+**Fuentes de invitaciones:**
+| Fuente | URL/Contacto |
+|--------|--------------|
+| SSB Pubs List | https://github.com/ssbc/ssb-server/wiki/Pub-Servers |
+| Oasis community | Canales SSB existentes |
+| Administrador del PUB | Contacto directo |
+
+**Anatomía del código:**
+```
+solarnethub.com:8008:@HzmUrdZb1vRWCwn3giLx3p/EWKuDiO44gXAaeulz3d4=.ed25519~pbpoWsf3r7uqzE6vHpnqTu9Tw2kgFUROHYBfLz/9aIw=
+│               │    │                                                      │ │
+│               │    └── SSB ID del PUB (clave pública ed25519)              │ │
+│               └── Puerto SSB (por defecto 8008)                            │ │
+│                                                                            │ │
+└── Hostname del servidor                           Token de invitación ─────┘ │
+                                                    (uso único, expira) ───────┘
+```
+
+---
+
+#### Paso 2: Navegar a la página de invitaciones
+
+```bash
+# Abrir en navegador:
+http://localhost:3000/invites
+```
+
+La página muestra:
+- Campo de texto: "Enter PUB invite code"
+- Botón: "Join PUB"
+- Lista de PUBs ya conectados (si los hay)
+
+---
+
+#### Paso 3: Ingresar código de invitación
+
+1. Copiar el código completo de invitación
+2. Pegarlo en el campo "Enter PUB invite code"
+3. Verificar que no haya espacios al inicio/final
+4. Click en **"Join PUB"**
+
+**Formatos aceptados:**
+```bash
+# Formato legacy (funciona)
+host:puerto:@key.ed25519~invite
+
+# Formato con protocolo (también funciona)
+net:host:puerto~shs:key~invite
+```
+
+---
+
+#### Paso 4: Verificar conexión en UI
+
+Navegar a la página de peers:
+```bash
+http://localhost:3000/peers
+```
+
+**Estados esperados:**
+
+| Estado | Significado | Icono |
+|--------|-------------|-------|
+| **Online** | Conexión activa con el PUB | 🟢 |
+| **Discovered** | PUB conocido, pendiente sync | 🟡 |
+| **Offline** | Sin conexión al PUB | 🔴 |
+
+**Resultado exitoso:**
+```
+Online (1): PUB solarnethub.com
+Discovered (1): PUB solarnethub.com
+```
+
+---
+
+#### Paso 5: Verificar sincronización en logs
+
+```bash
+# Obtener nombre del contenedor
+docker ps --format "{{.Names}}" | grep oasis
+
+# Ver logs en tiempo real (últimas 50 líneas)
+docker logs --tail 50 -f <CONTAINER_NAME>
+```
+
+**Indicadores de éxito en logs:**
+
+| Log | Significado |
+|-----|-------------|
+| `Synced-peers: [ 1 ]` | Primera conexión al PUB |
+| `Synced-peers: [ N ]` | N peers sincronizados (descubiertos vía PUB) |
+| `Sync-time: Xms` | Tiempo de sincronización |
+| `Connected to PUB` | Conexión establecida |
+
+**Ejemplo de logs exitosos:**
+```
+Synced-peers: [ 1 ]
+Sync-time: 127.456ms
+Synced-peers: [ 17 ]
+Sync-time: 8.777ms
+```
+
+---
+
+#### Paso 6: Guardar invitación en wallet (trazabilidad)
+
+```bash
+# Crear archivo con invitaciones usadas
+cat >> /<DESTINO>/<NOMBRE_WALLET>/PUB_INVITATIONS.txt << 'EOF'
+================================================================================
+PUB: <NOMBRE_PUB>
+Fecha: <FECHA_CONEXION>
+================================================================================
+Host: <HOST>:<PUERTO>
+PUB ID: <@PUB_ID.ed25519>
+Código completo: <CODIGO_INVITACION_COMPLETO>
+
+Estado: CONECTADO ✅
+Peers sincronizados: <N>
+================================================================================
+EOF
+```
+
+---
+
+#### Paso 7: Verificación final
+
+Checklist de verificación:
+
+| Check | Comando/Acción | Esperado |
+|-------|----------------|----------|
+| UI /peers | Navegador → localhost:3000/peers | Online (N): PUB visible |
+| Logs container | `docker logs --tail 20 <container>` | Synced-peers: [ N ] |
+| Feed | localhost:3000 (home) | Posts de otros usuarios |
+| Activity | localhost:3000/activity | Menciones y actividad |
+
+---
+
+### 🔍 Troubleshooting conexión PUB
+
+| Problema | Causa probable | Solución |
+|----------|----------------|----------|
+| "Invalid invite" | Código mal formateado o expirado | Solicitar nuevo código |
+| Sin peers después de 5 min | Firewall bloquea puerto 8008 | Verificar firewall, abrir 8008 |
+| PUB aparece Offline | Servidor PUB caído | Probar otro PUB |
+| 0 synced-peers | Nodo muy nuevo, sin contenido | Esperar, seguir a alguien |
+
+**Verificar conectividad al PUB:**
+```bash
+# Desde el host (fuera del container)
+nc -zv solarnethub.com 8008
+
+# Debería responder:
+# Connection to solarnethub.com 8008 port [tcp/*] succeeded!
+```
+
+---
+
+### 📦 Placeholders para conexión PUB:
+
+| Placeholder | Valor esta sesión | Descripción |
+|-------------|-------------------|-------------|
+| `<CONTAINER_NAME>` | `oasis-server-dev` | Nombre del contenedor Docker |
+| `<NOMBRE_PUB>` | `La Plaza (Ciclo 3)` | Nombre descriptivo del PUB |
+| `<HOST>` | `solarnethub.com` | Hostname del PUB |
+| `<PUERTO>` | `8008` | Puerto SSB del PUB |
+| `<@PUB_ID.ed25519>` | `@HzmUrdZb1vRWCwn3giLx3p/EWKuDiO44gXAaeulz3d4=.ed25519` | ID SSB del PUB |
+| `<CODIGO_INVITACION_COMPLETO>` | `solarnethub.com:8008:@HzmUrdZb1vRWCwn3giLx3p/EWKuDiO44gXAaeulz3d4=.ed25519~pbpoWsf3r7uqzE6vHpnqTu9Tw2kgFUROHYBfLz/9aIw=` | Código completo |
+| `<FECHA_CONEXION>` | `2025-12-25` | Fecha de conexión |
+| `<N>` | `17` | Número de peers sincronizados |
+
+---
+
+### ✅ Resultado sesión actual:
+
+```
+PUB: La Plaza (Ciclo 3)
+Host: solarnethub.com:8008
+PUB ID: @HzmUrdZb1vRWCwn3giLx3p/EWKuDiO44gXAaeulz3d4=.ed25519
+
+Estado final:
+- UI /peers: Online (1) ✅
+- Synced-peers: 17 ✅
+- Sync-time: 8.777ms ✅
+
+Invitación archivada en:
+C:\Users\aleph\OASIS\ALEPHLUCAS_WALLET_OASIS\backup-completo\PUB_INVITATIONS.txt
 ```
 
 ---
