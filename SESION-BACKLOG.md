@@ -5,24 +5,148 @@
 
 ---
 
+## 🤖 INSTRUCCIONES PARA AGENTES
+
+### Herramientas MCP disponibles:
+| Herramienta | Uso |
+|-------------|-----|
+| **Playwright MCP** | Navegación web automatizada (browser_navigate, browser_click, browser_snapshot, etc.) |
+| **Copilot Container Tools** | Gestión Docker (list_containers, logs_for_container, run_container, etc.) |
+| **VS Code builtins** | Archivos, terminal, búsqueda, edición |
+
+### Buenas prácticas:
+- **Inspeccionar herramientas disponibles** antes de cada sesión
+- Usar `browser_snapshot` para verificar estado de UIs web
+- Usar `logs_for_container` para debug de contenedores
+- Mantener este backlog actualizado en cada iteración
+
+---
+
 ## 📋 BACKLOG
 
 | ID | Estado | Tarea | Notas |
 |----|--------|-------|-------|
 | 0 | ✅ COMPLETADO | **Análisis profundo del repositorio** | Ver hallazgos abajo |
-| 0.1 | 🔄 EN CURSO | **Pre-Hackaton: Requisitos sistema** | VS Code, git, gh CLI |
+| 0.1 | ✅ COMPLETADO | **Pre-Hackaton: Requisitos sistema** | VS Code, git, gh CLI ✅ |
 | 0.5 | ✅ COMPLETADO | **Pre-Sprint: Actualización Oasis** | 0.4.9 → 0.6.3 ✅ |
-| 1 | ⏳ PENDIENTE | Preparar entorno (volúmenes, configs) | Volúmenes ya existen |
-| 2 | ⏳ PENDIENTE | Build imagen Docker | `npm run build` |
-| 3 | ⏳ PENDIENTE | Levantar contenedor | `npm run up` |
-| 4 | ⏳ PENDIENTE | Verificar acceso web localhost:3000 | |
-| 5 | ⏳ PENDIENTE | Crear identidad / perfil / avatar | |
-| 6 | ⏳ PENDIENTE | Usar invitación PUB | |
-| 7 | ⏳ PENDIENTE | **BACKUP credenciales USB** | CRÍTICO - crear backup-keys.sh |
+| 1 | ✅ COMPLETADO | Preparar entorno (volúmenes, configs) | volumes-dev/ listo |
+| 2 | ✅ COMPLETADO | Build imagen Docker | 208s ✅ |
+| 3 | ✅ COMPLETADO | Levantar contenedor | v0.6.3 funcionando ✅ |
+| 4 | ✅ COMPLETADO | Verificar acceso web localhost:3000 | Playwright verificado ✅ |
+| 5 | ✅ COMPLETADO | Crear identidad / perfil / avatar | AlephLucas ✅ |
+| 6 | 🔄 EN CURSO | **BACKUP credenciales USB** | CRÍTICO - hacer ANTES de PUB |
+| 7 | ⏳ PENDIENTE | Usar invitación PUB | Después del backup |
+
+### 📝 Tarea 5 - COMPLETADA ✅
+- Nombre: AlephLucas
+- Descripción: Lucas - Agente de Aleph Scriptorium
+- Avatar: Imagen de lucas descargada de GitHub
+- KARMA: 1
 
 ---
 
-## 🛠️ PRE-HACKATON: REQUISITOS SISTEMA (0.1)
+## 🔐 PROCESO DE BACKUP DE CREDENCIALES SSB (Tarea 6)
+
+> ⚠️ **CRÍTICO**: Sin este backup, la identidad SSB se pierde para siempre.
+> No hay "recuperar contraseña" - es criptografía asimétrica.
+
+### 🔍 Mecanismos de backup disponibles:
+
+| Método | Ubicación | Descripción |
+|--------|-----------|-------------|
+| **UI Web (Oasis)** | `/legacy` | Export/Import cifrado con password (min 32 chars) → `oasis.enc` |
+| **Script Docker** | `npm run backup-keys` | Copia archivos del volumen a carpeta local con verificación SHA256 |
+| **Manual** | Terminal | Copiar directamente `./volumes-dev/ssb-data/secret` |
+
+### Método 1: UI Web (recomendado para usuarios finales)
+
+1. Navegar a `http://localhost:3000/settings`
+2. Ir a sección "Keys" / "Llaves" / "Legacy"
+3. Establecer password de 32+ caracteres
+4. Click "Export" → descarga `oasis.enc`
+5. Guardar `oasis.enc` en USB o nube cifrada
+
+### Método 2: Script Docker (recomendado para devs)
+
+```bash
+# Backup a carpeta por defecto (./backups/)
+npm run backup-keys
+
+# Backup a USB específico
+./docker-scripts/backup-keys.sh /e/MI_BACKUP_SSB
+
+# Backup a otra ubicación
+./docker-scripts/backup-keys.sh /ruta/destino
+```
+
+### Método 3: Manual (línea de comandos)
+
+| Archivo origen (host) | Descripción | Prioridad |
+|-----------------------|-------------|----------|
+| `./volumes-dev/ssb-data/secret` | **Clave privada SSB** | 🔴 CRÍTICO |
+| `./volumes-dev/ssb-data/config` | Configuración del nodo | 🟡 Importante |
+| `./volumes-dev/ssb-data/gossip.json` | Lista de peers conocidos | 🟢 Opcional |
+
+### Pasos del proceso:
+
+```bash
+# 1. Crear carpeta en USB (reemplazar <LETRA_USB> y <NOMBRE_WALLET>)
+mkdir -p /<LETRA_USB>/<NOMBRE_WALLET>
+
+# 2. Copiar clave privada (EL MÁS IMPORTANTE)
+cp ./volumes-dev/ssb-data/secret /<LETRA_USB>/<NOMBRE_WALLET>/
+
+# 3. Copiar configuración
+cp ./volumes-dev/ssb-data/config /<LETRA_USB>/<NOMBRE_WALLET>/
+
+# 4. Copiar lista de peers (opcional)
+cp ./volumes-dev/ssb-data/gossip.json /<LETRA_USB>/<NOMBRE_WALLET>/ 2>/dev/null || true
+
+# 5. Verificar
+ls -la /<LETRA_USB>/<NOMBRE_WALLET>/
+```
+
+### Verificación del backup:
+
+```bash
+# Comparar hash del archivo original vs backup
+sha256sum ./volumes-dev/ssb-data/secret
+sha256sum /<LETRA_USB>/<NOMBRE_WALLET>/secret
+# Deben ser IDÉNTICOS
+```
+
+### Variables para esta sesión:
+| Placeholder | Valor actual |
+|-------------|-------------|
+| `<LETRA_USB>` | ⚠️ **TEMPORAL**: `C:\Users\aleph\OASIS\` |
+| `<NOMBRE_WALLET>` | `ALEPHLUCAS_WALLET_OASIS` |
+| `<IDENTIDAD_SSB>` | `@rZql/UwfYArm00RnK19+9HlBZhK7gxE++m/opHBG7vo=.ed25519` |
+
+### ⚠️ WARNING: BACKUP TEMPORAL - NO ES SEGURO
+
+> **🔴 ACCIÓN PENDIENTE**: El backup actual está en el MISMO DISCO.
+> 
+> Si el disco falla → PIERDES TODO.
+> 
+> **DEBES copiar `C:\Users\aleph\OASIS\ALEPHLUCAS_WALLET_OASIS\` a:**
+> - 📀 Un USB extraíble, O
+> - 💻 Otro ordenador diferente, O  
+> - ☁️ Almacenamiento en la nube cifrado
+
+### ✅ Backup temporal completado:
+```
+Ubicación: C:\Users\aleph\OASIS\ALEPHLUCAS_WALLET_OASIS\
+Archivos:
+  - secret (869 bytes) - CLAVE PRIVADA ✅
+  - config (406 bytes) - Configuración ✅
+  - gossip.json (2 bytes) - Peers ✅
+  
+Hash SHA256 verificado: def0fc72eb668f2dda986fd9f54249fd37488d6f1c6a11af721ba0af15728d99
+```
+
+---
+
+## 🛠️ PRE-HACKATON: REQUISITOS SISTEMA (0.1) ✅ COMPLETADO
 
 | Requisito | Estado | Notas |
 |-----------|--------|-------|
@@ -30,8 +154,9 @@
 | Git | ✅ | Funcionando |
 | Docker | ✅ | v29.1.3 + Compose v2.40.3 |
 | NVIDIA Runtime | ✅ | Quadro P2000 detectada |
-| gh CLI | ⏳ | Pendiente instalar |
-| Auth GitHub | ⏳ | Pendiente web-auth |
+| gh CLI | ✅ | v2.83.2 instalado |
+| Auth GitHub | ✅ | escrivivir-co autenticado |
+| **🔴 USB extraíble** | ⏳ | **CRÍTICO** - Para backup de credenciales SSB |
 
 ---
 
