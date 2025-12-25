@@ -1,7 +1,13 @@
-# 🌴 OASIS Hackathon Kit 2025
+# 🐳 DockerizedOasisTutorial
 
-> **Guía (asistida por IA o no) para prepararse para el hackathon de OASIS**  
-> *Último finde de 2025 · Organiza [SolarNET.HuB](https://solarnethub.com)*
+> **Tutorial amateur para correr OASIS en Docker**  
+> *Proyecto no oficial · Creado durante hackathon 2025*
+
+⚠️ **DISCLAIMER**: Este es un proyecto experimental/educativo.  
+- ❌ **NO** es un producto de [SolarNET.HuB](https://solarnethub.com)  
+- ❌ **NO** es un producto de [OASIS](https://github.com/epsylon/oasis)  
+- ❌ **NO** está completo ni probado exhaustivamente  
+- ⚠️ **Úsalo bajo tu propio riesgo**
 
 ![OASIS UI](docs/assets/Oasis_UI.png)
 
@@ -30,16 +36,15 @@
 
 ## 🏠 ¿Qué es OASIS?
 
-**OASIS** es una red social distribuida, descentralizada, federada y realmente libre, basada en [SSB (Secure Scuttlebutt)](https://scuttlebutt.nz).
+**OASIS** es una red social distribuida basada en [SSB (Secure Scuttlebutt)](https://scuttlebutt.nz).
 
 - 🔐 **Tu identidad es tuya** - Par de claves Ed25519, sin servidores centrales
 - 🌐 **Mesh networking** - Funciona offline, sincroniza cuando hay conexión
 - 🤖 **IA colectiva integrada** - Modelo "42" entrenado con contenido de la red
 - 💰 **ECOin** - Criptomoneda interna + Renta Básica Universal
 - ⚖️ **Gobernanza** - Parlamento y Cortes descentralizadas
-- 🎭 **L.A.R.P.** - 1+8 casas para organización federal
 
-> *"Una red donde tú tienes el control, no una corporación."*
+> ⚠️ **Este tutorial NO es OASIS oficial** - Es un wrapper Docker experimental.
 
 ---
 
@@ -60,7 +65,7 @@ docker compose up --build -d
 open http://localhost:3000
 ```
 
-**Requisitos**: Docker 24+, 8GB RAM mínimo. GPU NVIDIA opcional pero recomendada para IA.
+**Requisitos**: Docker 24+, 8GB RAM mínimo. GPU NVIDIA opcional.
 
 ---
 
@@ -68,59 +73,19 @@ open http://localhost:3000
 
 | Documento | Descripción |
 |-----------|-------------|
-| [HACKATON_GUIDE.md](HACKATON_GUIDE.md) | 💬 **Conversación completa** con el Agente IA - Todo el proceso paso a paso |
-| [SESION-BACKLOG.md](SESION-BACKLOG.md) | ✅ Backlog de tareas de la sesión de preparación |
-| [SESION-BACKLOG-EXPANSION.md](SESION-BACKLOG-EXPANSION.md) | 🔧 Expansión: ECOin wallet en Docker |
+| [HACKATON_GUIDE.md](HACKATON_GUIDE.md) | 💬 Conversación completa con Agente IA |
+| [SESION-BACKLOG.md](SESION-BACKLOG.md) | ✅ Backlog de tareas completadas |
+| [SESION-BACKLOG-EXPANSION.md](SESION-BACKLOG-EXPANSION.md) | ⚡ Expansión: ECOin wallet en Docker |
 | [docs/](docs/index.html) | 🌐 Landing page para GitHub Pages |
 | [GPU_SIMPLE.md](GPU_SIMPLE.md) | 🎮 Configuración de GPU para IA local |
 
 ---
 
-## 🔗 El Ecosistema
-
-```
-                    ┌─────────────────────────┐
-                    │   solarnethub.com       │
-                    │   ═══════════════       │
-                    │   La casa organizadora  │
-                    │   del hackathon         │
-                    └───────────┬─────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌───────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  OASIS App    │     │   ECOin Chain   │     │   Wiki/Docs     │
-│  ───────────  │     │   ───────────   │     │   ───────────   │
-│  Red social   │     │  Criptomoneda   │     │  Conocimiento   │
-│  distribuida  │     │  + UBI semanal  │     │  colectivo      │
-└───────────────┘     └─────────────────┘     └─────────────────┘
-        │                       │                       │
-        └───────────────────────┴───────────────────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │  TÚ (tu nodo local)   │
-                    │  ═══════════════════  │
-                    │  Soberanía digital    │
-                    └───────────────────────┘
-```
-
-**Links útiles:**
-- 🏠 **Casa madre**: [solarnethub.com](https://solarnethub.com)
-- 📖 **Wiki**: [wiki.solarnethub.com](https://wiki.solarnethub.com)
-- 💰 **ECOin**: [ecoin.03c8.net](https://ecoin.03c8.net)
-- 🔧 **Código fuente**: [solarnethub.com/git](https://solarnethub.com/git)
-
----
-
 ## ⚠️ BACKUP: No lo olvides
 
-Tu identidad en la red es un archivo llamado `secret`. **Si lo pierdes, pierdes tu avatar para siempre.**
+Tu identidad es un archivo llamado `secret`. **Si lo pierdes, pierdes tu avatar para siempre.**
 
 ```bash
-# Ubicación dentro del contenedor
-/home/oasis/.ssb/secret
-
 # Ubicación en tu máquina (con volúmenes Docker)
 ./volumes-dev/ssb-data/secret
 
@@ -128,23 +93,32 @@ Tu identidad en la red es un archivo llamado `secret`. **Si lo pierdes, pierdes 
 cp ./volumes-dev/ssb-data/secret /media/TU_USB/oasis-backup/
 ```
 
-El script [docker-scripts/backup-keys.sh](docker-scripts/backup-keys.sh) hace esto automáticamente con verificación SHA256.
+---
 
-También puedes usar la función `/legacy` integrada en OASIS para exportar todo cifrado.
+## 🔗 Enlaces al Proyecto Original
+
+Este tutorial dockeriza el proyecto OASIS de SolarNET.HuB:
+
+- 🏠 **OASIS oficial**: [solarnethub.com](https://solarnethub.com)
+- 📖 **Wiki**: [wiki.solarnethub.com](https://wiki.solarnethub.com)
+- 💻 **Código fuente**: [github.com/epsylon/oasis](https://github.com/epsylon/oasis)
+- 💰 **ECOin**: [ecoin.03c8.net](https://ecoin.03c8.net)
 
 ---
 
 ## 🎭 Para Freaks, Groupies y Satélites
 
-Este repositorio es un **proyecto satélite/parásito** del ecosistema OASIS, creado con la intención de:
+⚠️ **IMPORTANTE**: Este repositorio es un **proyecto amateur NO OFICIAL**.
+
+Creado con la intención de:
 
 1. **Documentar** el proceso de preparación para un hackathon
 2. **Facilitar** la entrada a nuevos habitantes de la red
-3. **Demostrar** que un agente de IA puede guiar (o acompañar) el proceso
+3. **Experimentar** con agentes IA guiando el proceso
 
-*¿Eres un freak de la descentralización? ¿Un groupie del SSB? ¿Un satélite orbitando OASIS?*
+*¿Eres un freak de la descentralización? ¿Un groupie del SSB?*
 
-**Bienvenido/a.** Este kit es para ti.
+**Bienvenido/a.** Pero recuerda: esto es experimental y puede fallar.
 
 ---
 
@@ -158,24 +132,29 @@ Este repositorio es un **proyecto satélite/parásito** del ecosistema OASIS, cr
 
 ## 📜 Licencia
 
-**GNU Affero General Public License v3** - *animus iocandi*
+**[Animus Iocandi Public License (AIPL) v1.0](LICENSE)** - *"intención de bromear"*
 
-El código de OASIS pertenece a sus creadores en [SolarNET.HuB](https://solarnethub.com).
+Este repositorio es un proyecto amateur/experimental sin garantía alguna.
 
-Este repositorio es una derivación/documentación con propósitos educativos y de participación en hackathon.
+El código de OASIS pertenece a sus creadores en [SolarNET.HuB](https://solarnethub.com) bajo GNU AGPL v3.
 
-> *"Si algo de aquí te sirve, compártelo. Si lo mejoras, devuélvelo a la comunidad."*
+> *"Si algo de aquí te sirve, genial. Si se rompe, no nos culpes."*
 
-```
-  ╔═══════════════════════════════════════════════════════════╗
-  ║                                                           ║
-  ║   Hecho con 🤖 + ☕ durante la preparación del            ║
-  ║   Hackathon OASIS · Último finde de 2025                  ║
-  ║                                                           ║
-  ║   github.com/AcidGambit/oasis-alephscript-network-sdk     ║
-  ║                                                           ║
-  ╚═══════════════════════════════════════════════════════════╝
-```
+---
+
+## 🔧 RESTART vs BUILD
+
+### 📋 **RESTART** (`docker-compose restart`)
+
+- ✅ Cambios en código fuente (`.js`, `.mjs`)
+- ✅ Cambios en variables de entorno
+- ✅ Cambios en configuración
+
+### 🏗️ **BUILD** (`docker compose build`)
+
+- ✅ Cambios en el Dockerfile
+- ✅ Cambios en dependencias (nuevos paquetes)
+- ✅ Primera vez que construyes
 
 ---
 
@@ -184,47 +163,18 @@ Este repositorio es una derivación/documentación con propósitos educativos y 
 
 ## Oasis
 
-Oasis is a decentralized social network client built with SSB technology.
+Oasis is a **libre, open-source, encrypted, peer-to-peer, distributed & federated** project networking application.
 
-### Frontend Features
-- 🌍 Multi-language
-- 🌚 Dark-mode design  
-- 👁️ Dyslexia mode
-- 🔊 Screen reader accessible
-- 💬 Public posts, replies, and mentions
-- 🔐 Private messages
-- 🖼️ Image and audio handling
-- 🌐 External link previews
-- 📰 RSS feed generation
+### Modules incluidos:
+- Agenda, AI, Audios, Banking, BlockExplorer, Bookmarks, Cipher
+- Courts, Documents, Events, Favorites, Feed, Forums, Governance
+- Images, Invites, Jobs, Legacy, Latest, Market, Multiverse
+- Opinions, Parliament, Pixelia, Projects, Popular, Reports
+- Summaries, Tags, Tasks, Threads, Topics, Transfers
+- Trending, Tribes, Videos, Wallet
 
-### Modules
-| Module | Description |
-|--------|-------------|
-| activity | Network activity |
-| agenda | Collective calendar |
-| audios | Audio sharing |
-| banking | UBI system |
-| blockchain | Distributed ledger |
-| cipher | Encrypted messages |
-| courts | Justice system |
-| cv | Resumes |
-| documents | Document management |
-| events | Events |
-| favorites | Bookmarks |
-| feed | Timeline |
-| forum | Discussion forum |
-| images | Image gallery |
-| inhabitants | Network users |
-| jobs | Job board |
-| legacy | Backup/Restore |
-| market | P2P marketplace |
-| opinions | Opinion system |
-| parliament | Governance |
-| polls | Polls |
-| tribes | Federated groups |
-
-### Links
-- SNH Website: https://solarnethub.com
+### Links oficiales:
+- Website: https://solarnethub.com
 - Documentation: https://wiki.solarnethub.com
 - Code of Conduct: https://wiki.solarnethub.com/docs/code_of_conduct
 
@@ -232,4 +182,14 @@ Oasis is a decentralized social network client built with SSB technology.
 
 ---
 
-*¿Preguntas? Únete a La Plaza en el PUB de solarnethub.com*
+```
+  ╔═══════════════════════════════════════════════════════════╗
+  ║                                                           ║
+  ║   Hecho con 🤖 + ☕ durante el Hackathon 2025             ║
+  ║                                                           ║
+  ║   ⚠️ PROYECTO AMATEUR - NO OFICIAL - SIN GARANTÍA         ║
+  ║                                                           ║
+  ╚═══════════════════════════════════════════════════════════╝
+```
+
+*¿Preguntas? Este proyecto no tiene soporte oficial.*
