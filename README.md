@@ -1,6 +1,7 @@
 # 🐳 DockerizedOasisTutorial
 
-> **Tutorial amateur para correr OASIS en Docker**  
+[Tutorial para correr OASIS en Docker: acceso visita](https://escrivivir-co.github.io/alephscript-network-sdk/)  
+
 > *Proyecto no oficial · Creado durante hackathon 2025*
 
 ⚠️ **DISCLAIMER**: Este es un proyecto experimental/educativo.  
